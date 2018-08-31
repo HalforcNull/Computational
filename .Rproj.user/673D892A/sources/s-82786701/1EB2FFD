@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1535719789846.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "1EB2FFD",
+    "lastKnownWriteTime" : 1535723700,
+    "last_content_update" : 1535723700544,
+    "path" : "C:/GitRepo/Computational/HW1.R",
+    "project_path" : "HW1.R",
+    "properties" : {
+        "cursorPosition" : "50,13",
+        "scrollLine" : "20",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
