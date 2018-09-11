@@ -49,14 +49,14 @@ drawFigure1 <- function(x, t, mu, sd, N, alpha, beta)
 {
   Phi_X <- applyBasicFuntion(x, mu, sd, N)
   
-  W$Sn <- CalculateWeightSn(alpha, beta, Phi_X, N)
-  W$Mn <- CalculateWeightMn(beta, W$Sn, Phi_X, t)
+  W_Sn <- CalculateWeightSn(alpha, beta, Phi_X, N)
+  W_Mn <- CalculateWeightMn(beta, W_Sn, Phi_X, t)
   
   a <- seq(0,1,0.01)
   Phi_A <- applyBasicFuntion(a, mu, sd, N)
   
-  Pred_Mn <- CalculateTMn(W$Mn, Phi_A)[1,]
-  Pred_Var <- CalculateTVar(W$Sn, Phi_A, beta)[1,]
+  Pred_Mn <- CalculateTMn(W_Mn, Phi_A)[1,]
+  Pred_Var <- CalculateTVar(W_Sn, Phi_A, beta)[1,]
   
   
   PredMax <- Pred_Mn + sqrt(Pred_Var)
@@ -74,15 +74,15 @@ drawFigure2 <- function(x, t, mu, sd, N, alpha, beta)
 {
   Phi_X <- applyBasicFuntion(x, mu, sd, N)
   
-  W$Sn <- CalculateWeightSn(alpha, beta, Phi_X, N)
-  W$Mn <- CalculateWeightMn(beta, W$Sn, Phi_X, t)[,1]
+  W_Sn <- CalculateWeightSn(alpha, beta, Phi_X, N)
+  W_Mn <- CalculateWeightMn(beta, W_Sn, Phi_X, t)[,1]
   
-  mySampledW <- mvrnorm(n=5, mu=W$Mn, Sigma=W$Sn)
+  mySampledW <- mvrnorm(n=5, mu=W_Mn, Sigma=W_Sn)
   
   a <- seq(0,1,0.01)
   Phi_A <- applyBasicFuntion(a, mu, sd, N)
   
-  plot(a, sin(2*pi*a), xlim=c(0,1), ylim=c(-1.5,1.5), type='l', col='red')
+  plot(a, sin(2*pi*a), xlim=c(0,1), ylim=c(-1.5,1.5), type='l', col='red', main = paste0('Predictions based on different w, when training size = ', as.character(length(x))))
   points(x,t)
   
   for(i in 1:nrow(mySampledW)){
