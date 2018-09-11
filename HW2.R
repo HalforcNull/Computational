@@ -1,4 +1,4 @@
-
+library('MASS')
 # Step 1. function: apply basis functions on X
 applyBasicFuntion <- function(x, mu, sd, N){
   if(length(mu)!=N || length(sd)!=N){
@@ -43,12 +43,11 @@ CalculateTVar <- function(WSn, Phi_X, beta){
 
 
 
-# Step 4. using above functions draw graphs
-drawFigure <- function(x, t, mu, sd, N, alpha, beta)
+# Step 4. using above functions draw graphs:
+#     4.1: Graph 3.8
+drawFigure1 <- function(x, t, mu, sd, N, alpha, beta)
 {
   Phi_X <- applyBasicFuntion(x, mu, sd, N)
-
-  W <- solveW(Phi_X, t)
   
   W$Sn <- CalculateWeightSn(alpha, beta, Phi_X, N)
   W$Mn <- CalculateWeightMn(beta, W$Sn, Phi_X, t)
@@ -70,6 +69,28 @@ drawFigure <- function(x, t, mu, sd, N, alpha, beta)
   points(a, PredMin, xlim=c(0,1), ylim=c(-2,2), type='l')
   polygon(c(a, rev(a)), c(PredMax, rev(PredMin)), col=rgb(0,1,1,0.4))
 }
+#     4.2: Graph 3.9
+drawFigure2 <- function(x, t, mu, sd, N, alpha, beta)
+{
+  Phi_X <- applyBasicFuntion(x, mu, sd, N)
+  
+  W$Sn <- CalculateWeightSn(alpha, beta, Phi_X, N)
+  W$Mn <- CalculateWeightMn(beta, W$Sn, Phi_X, t)[,1]
+  
+  mySampledW <- mvrnorm(n=5, mu=W$Mn, Sigma=W$Sn)
+  
+  a <- seq(0,1,0.01)
+  Phi_A <- applyBasicFuntion(a, mu, sd, N)
+  
+  plot(a, sin(2*pi*a), xlim=c(0,1), ylim=c(-1.5,1.5), type='l', col='red')
+  points(x,t)
+  
+  for(i in 1:nrow(mySampledW)){
+      points(a, Phi_A %*% mySampledW[i,], xlim=c(0,1), ylim=c(-1.5,1.5), type='l', col='blue')
+  }
+}
+
+
 
 # Step 5. Run test given different size of training data
 
@@ -79,7 +100,6 @@ N = 9         # Module size ( how many normal distribution is contained)
 
 x <- runif(n) # sample x using uniform distribution. By default, min = 0, max = 1.
 t <- sin(2*pi*x) + rnorm(n, sd = 0.1) # calculate t, plug gaussian noise
-
 
 # setup basis function mean and sd
 mu <- seq(0,1,0.125)
@@ -92,22 +112,53 @@ beta <- 25
 # n = 1
 datasetX <- x[1:1]
 datasetT <- t[1:1]
-drawFigure(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure1(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure2(datasetX, datasetT, mu, sd, N, alpha, beta)
 
 
 # n = 2
 datasetX <- x[1:2]
 datasetT <- t[1:2]
-drawFigure(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure1(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure2(datasetX, datasetT, mu, sd, N, alpha, beta)
 
-# n = 4
-datasetX <- x[1:4]
-datasetT <- t[1:4]
-drawFigure(datasetX, datasetT, mu, sd, N, alpha, beta)
+# n = 5
+datasetX <- x[1:5]
+datasetT <- t[1:5]
+drawFigure1(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure2(datasetX, datasetT, mu, sd, N, alpha, beta)
+
+# n = 10
+datasetX <- x[1:10]
+datasetT <- t[1:10]
+drawFigure1(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure2(datasetX, datasetT, mu, sd, N, alpha, beta)
+
 
 # n = 20
 datasetX <- x[1:20]
 datasetT <- t[1:20]
-drawFigure(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure1(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure2(datasetX, datasetT, mu, sd, N, alpha, beta)
+
+# n = 50
+datasetX <- x[1:50]
+datasetT <- t[1:50]
+drawFigure1(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure2(datasetX, datasetT, mu, sd, N, alpha, beta)
+
+# n = 300
+datasetX <- x[1:300]
+datasetT <- t[1:300]
+drawFigure1(datasetX, datasetT, mu, sd, N, alpha, beta)
+drawFigure2(datasetX, datasetT, mu, sd, N, alpha, beta)
+
+####        Question:
+####          1.  What is alpha and beta mathmatical meaning? or how can we 'guess' a better alpha and beta? we us alpha = 2, and beta = 25.
+####          2.  What is a good variance of basis function. We tried use 1, it cause the matrix singular; so we change to use 0.01 (which sd = 0.1)
+####              Note: white noise we pluged in is also having sd = 0.1
+####
+
+
 
 
