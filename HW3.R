@@ -59,8 +59,8 @@ drawFigure1 <- function(x, t, mu, sd, N, alpha, beta)
   Pred_Var <- CalculateTVar(W_Sn, Phi_A, beta)[1,]
   
   
-  PredMax <- Pred_Mn + sqrt(Pred_Var)
-  PredMin <- Pred_Mn - sqrt(Pred_Var)
+  PredMax <- Pred_Mn + 2 * sqrt(Pred_Var)
+  PredMin <- Pred_Mn - 2 * sqrt(Pred_Var)
   
   plot(a, Pred_Mn, xlim=c(0,1), ylim = c(-2,2), type='l', main = paste0('Result of training size = ', as.character(length(x))))
   points(a, sin(2*pi*a), xlim=c(0,1), ylim=c(-2,2), type='l', col='red')
