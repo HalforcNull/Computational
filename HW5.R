@@ -58,20 +58,25 @@ N <- 3
 w.old <- c(1,1,1)
 
 for(i in 1:10000){
-  print(paste0('Run ', i, '' ) )
-  print('Old weight:')
-  print(w.old)
+  # writeLines(paste0('Run ', i, '' ) )
+  # writeLines('Old weight:')
+  # writeLines(w.old)
   old.y <- sigma.fun(w.old, Phi_X)
   old.R <- matrix.R.fun(old.y)
   old.Z <- matrix.Z.fun(w.old, Phi_X, old.R, old.y, target.T)
   w.new <- as.vector( w.update(Phi_X, old.R, old.Z) )
-  print('New weight:')
-  print(w.new)
+  # writeLines('New weight:')
+  # writeLines(w.new)
   if( abs(w.old[1] - w.new[1]) < 0.00000001 &
       abs(w.old[2] - w.new[2]) < 0.00000001 &
       abs(w.old[3] - w.new[3]) < 0.00000001 )
   {
-    print('find acceptable weight')
+    writeLines('Frequenist Logistic Reg. :')
+    writeLines(paste0('find acceptable weight using ', i, ' Runs'))
+    writeLines('New weight:')
+    print(w.new)
+    writeLines("")
+    writeLines("")
     break
   }
   w.old <- w.new 
@@ -79,188 +84,128 @@ for(i in 1:10000){
 
 new.y <- sigma.fun(w.new, Phi_X)
 pred.class <- ifelse(new.y < 0.5, 1, 2)
-plot(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2), main = 'Use glm() function directly')
+plot(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2), main = 'Frequenist Logistic Reg.')
 points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
 points(X[pred.class==1,1],X[pred.class==1,2],pch=0,col="green")
 points(X[pred.class==2,1],X[pred.class==2,2],pch=0,col="blue")
 
-
-
-
+writeLines('Frequenist Logistic Reg. Result:')
+print(table(pred.class, target.T))
+writeLines("")
+writeLines("")
 
 
 
 # Baysian Logistic Reg.
-# Find the distribution of weight
-# Do convolution (if possible, otherwise, sample from weight and calculate mean)
+# 1. Find the distribution of weight
+# 2. Do convolution (if possible, otherwise, sample from weight and calculate mean)
 
 
+# Step 1. Laplace Approximation to approximate the distribution of weight 
+# W_new = w_old + t( t(Phi_X) * (t-y) * Sn_old) <- by first derivation = 0
+find.w.map <- function(w.old, Phi_X, Training.T, y.old, Sn.old){
+  #return( w.old + t( t(Phi_X) %*% (Training.T-y.old) %*% Sn_old) )
+  #         3*1        3*150       150 * 1                3*3
+  return(w.old + t( t(Training.T-y.old) %*% t(Phi_X) %*%  Sn.old))
+  #       3*1     t(  1 * 150                150*3      3*3   )
+}
+
+# Sn_new = Sn_old^(-1) + t(Phi_X) * R * Phi_X
+find.Sn <- function(Sn.old, Phi_X, Updated.R){
+#  return(solve(Sn.old) + t(Phi_X) %*% Updated.R %*% Phi_X)
+#         3*3             150*3        150*150       3*150
+  return(solve(Sn.old) + Phi_X %*% Updated.R %*% t(Phi_X))
+  #         3*3             150*3        150*150       3*150
+}
+
+# Run Iteration 
+w.old <- c(1,1,1)
+Sn.old <- diag(3)
+Phi_X <- basis.fun(X[,-3])
+target.T <- X[,3] - 1
+N <- 3
 
 
+for( i in 1:10000){
+  # writeLines(paste0('Run ', i, '' ) )
+  # writeLines('Old weight:')
+  # writeLines(w.old)
+  # writeLines('Old Sn:')
+  # writeLines(Sn.old)
+  old.y <- sigma.fun(w.old, Phi_X)
+  old.R <- matrix.R.fun(old.y)
+  w.new <- find.w.map(w.old, Phi_X, target.T, old.y, Sn.old)
+  updated.y <- sigma.fun(w.new, Phi_X)
+  updated.R <- matrix.R.fun(updated.y)
+  Sn.new <- find.Sn(Sn.old, Phi_X, updated.R)
+  
+  # writeLines('New weight:')
+  # writeLines(w.new)
+  # writeLines('New Sn:')
+  # writeLines(Sn.new)
+  if( abs(w.old[1] - w.new[1]) < 0.0001 &
+      abs(w.old[2] - w.new[2]) < 0.0001 &
+      abs(w.old[3] - w.new[3]) < 0.0001 )
+  {
+    writeLines('Laplace Approximation: ')
+    writeLines(paste0('find acceptable weight mean using ', i, ' Runs'))
+    writeLines('Weight mean:')
+    print(w.new)
+    writeLines('Weight cov:')
+    print(Sn.new)
+    writeLines("")
+    writeLines("")
+    break
+  }
+  w.old <- w.new
+  Sn.old <- Sn.new
+}
 
 
+# Step 2. Find Covlution
+
+## Solution 1: using Sampling
+N = 100
+
+baysianSamplingSolution <- function(Phi_X_new, w.map, Sn, N){
+  sampled.w <- rmvnorm(N, w.map, Sn)
+  sampled.y <- apply( sampled.w, 1, sigma.fun, Phi_X = Phi_X_new)
+  return(rowMeans(sampled.y))
+}
 
 
+new.y <- baysianSamplingSolution(Phi_X, w.new, Sn.new, N)
+pred.class <- ifelse(new.y < 0.5, 1, 2)
+plot(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2), main = 'Baysian Logistic Reg. (Sampling weight)')
+points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
+points(X[pred.class==1,1],X[pred.class==1,2],pch=0,col="green")
+points(X[pred.class==2,1],X[pred.class==2,2],pch=0,col="blue")
 
+writeLines('Baysian Logistic Reg.(Sampling) Result:')
+print(table(pred.class, target.T))
+writeLines("")
+writeLines("")
 
+## Solution 2: using Approximation 
+baysianApproximationSolution <- function(Phi_X_new, w.map, Sn){
+  # 4.149
+  mu.a <- t(w.new) %*% Phi_X_new
+  # 4.150
+  var.a <- t(Phi_X_new) %*% Sn %*% Phi_X_new
+  # 4.154
+  kappa <- 1/sqrt(1 + pi*var.a/8)
+  return(1/(1+exp(-kappa %*% t(mu.a))))
+}
 
+new.y <- apply(Phi_X, 2, baysianApproximationSolution, w.map=w.new, Sn=Sn.new)
+pred.class <- ifelse(new.y < 0.5, 1, 2)
+plot(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2), main = 'Baysian Logistic Reg. (Kappa)')
+points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
+points(X[pred.class==1,1],X[pred.class==1,2],pch=0,col="green")
+points(X[pred.class==2,1],X[pred.class==2,2],pch=0,col="blue")
 
-####################################################################### ####################################################################### 
-
-
-
-
-
-# my.df <- as.data.frame(X)
-# colnames(my.df) <- c('x.cod','y.cod','grp')
-# my.df$grp <- my.df$grp - 1
-# model.fit <- glm(grp~x.cod+y.cod, data=my.df, family = binomial)
-# 
-# my.newData <- as.data.frame(X[,-3])
-# colnames(my.newData) <- c('x.cod','y.cod')
-# freq.prob <- predict(model.fit,
-#                      newdata = my.newData,
-#                      type='response')
-# 
-# 
-# freq.predict <- ifelse(freq.prob > 0.5, 1, 2)
-# Y <- cbind(my.newData, freq.predict)
-# 
-# plot(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2), main = 'Use glm() function directly')
-# points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
-# points(Y[Y[,3]==1,1],Y[Y[,3]==1,2],pch=0,col="green")
-# points(Y[Y[,3]==2,1],Y[Y[,3]==2,2],pch=0,col="blue")
-# 
-# table(Y[,3], X[,3])
-# 
-# # Apply some 'kernel' function 
-# my.df <- as.data.frame(X)
-# colnames(my.df) <- c('x.cod','y.cod','grp')
-# my.df$new.cod <- my.df$x.cod ^ 2 + my.df$y.cod^2
-# my.df$grp <- my.df$grp - 1
-# model.fit <- glm(grp~new.cod, data=my.df, family = binomial)
-# 
-# my.newData <- as.data.frame(X[,1]^2 + X[,2]^2)
-# colnames(my.newData) <- c('new.cod')
-# freq.prob <- predict(model.fit,
-#                      newdata = my.newData,
-#                      type='response')
-# 
-# 
-# freq.predict <- ifelse(freq.prob < 0.5, 1, 2)
-# Y <- cbind(X[,-3], freq.predict)
-# 
-# plot(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2), main = 'Use glm() function directly')
-# points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
-# points(Y[Y[,3]==1,1],Y[Y[,3]==1,2],pch=0,col="green")
-# points(Y[Y[,3]==2,1],Y[Y[,3]==2,2],pch=0,col="blue")
-# 
-# table(Y[,3], X[,3])
-# 
-# # Baysian solution
-# 
-# # basis function
-# basis.fun <- function(x){
-#   phi_1 <- dmvnorm(x, mean=rep(0,2),sigma = diag(2))
-#   phi_2 <- dmvnorm(x, mean=rep(-1,2), sigma = diag(2))
-#   
-#   return(rbind(phi_1, phi_2))
-# }
-# 
-# #4.59 4.87
-# sigma.fun <- function(w, Phi_X){
-#   a = t(w) %*% Phi_X
-#   return(as.vector(1/(1+exp(-a))))
-# }
-# 
-# #4.98
-# matrix.R.fun <- function(y){
-#   return(diag(y*(1-y)))
-# }
-# 
-# #4.100
-# matrix.Z.fun <- function(w, Phi_X, matrix.R, y, t){
-#   return(t(w %*% Phi_X)- solve(matrix.R) %*% (y-t))
-# }
-# 
-# # update w 4.99
-# w.update <- function(Phi_X, matrix.R, matrix.Z){
-#   return(solve(Phi_X%*%matrix.R%*%t(Phi_X)) %*% Phi_X %*% matrix.R %*% matrix.Z)
-#   #             2*150   150*150    150*2         2*150         150*150     150*1  
-# }
-# 
-# # run iteration
-# Phi_X <- basis.fun(X[,-3])
-# target.T <- X[,3] 
-# N <- 2
-# 
-# w.old <- c(1,1)
-# 
-# for(i in 1:10000){
-#   print(paste0('Run ', i, '' ) )
-#   print('Old weight:')
-#   print(w.old)
-#   old.y <- sigma.fun(w.old, Phi_X)
-#   old.R <- matrix.R.fun(old.y)
-#   old.Z <- matrix.Z.fun(w.old, Phi_X, old.R, old.y, target.T)
-#   w.new <- as.vector( w.update(Phi_X, old.R, old.Z) )
-#   print('New weight:')
-#   print(w.new)
-#   if( abs(w.old[1] - w.new[1]) < 0.00000001 &
-#       abs(w.old[2] - w.new[2]) < 0.00000001 )
-#   {
-#     print('find acceptable weight')
-#     break
-#   }
-#   w.old <- w.new 
-# }
-# 
-# new.y <- sigma.fun(w.new, Phi_X)
-# pred.class <- ifelse(new.y < 2, 1, 2)
-# plot(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2), main = 'Use glm() function directly')
-# points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
-# points(X[pred.class==1,1],X[pred.class==1,2],pch=0,col="green")
-# points(X[pred.class==2,1],X[pred.class==2,2],pch=0,col="blue")
-# 
-# 
-# ###  Try other basis function
-# {
-# basis.fun2 <- function(x){
-#   phi_1 <- dmvnorm(x, mean=rep(0,2), sigma = diag(c(0.2, 0.1)))
-#   phi_2 <- dmvnorm(x, mean=rep(-1,2), sigma = diag(c(0.2, 0.1)))
-#   return(rbind(phi_1, phi_2))
-# }
-# 
-# Phi_X <- basis.fun2(X[,-3])
-# target.T <- X[,3]
-# 
-# w.old <- c(1,1)
-# 
-# for(i in 1:10000){
-#   print(paste0('Run ', i, '' ) )
-#   print('Old weight:')
-#   print(w.old)
-#   old.y <- sigma.fun(w.old, Phi_X)
-#   old.R <- matrix.R.fun(old.y)
-#   old.Z <- matrix.Z.fun(w.old, Phi_X, old.R, old.y, target.T)
-#   w.new <- as.vector( w.update(Phi_X, old.R, old.Z) )
-#   print('New weight:')
-#   print(w.new)
-#   if( abs(w.old[1] - w.new[1]) < 0.00000001 &
-#       abs(w.old[2] - w.new[2]) < 0.00000001 )
-#   {
-#     print('find acceptable weight')
-#     break
-#   }
-#   w.old <- w.new 
-# }
-# 
-# new.y <- sigma.fun(w.new, Phi_X)
-# pred.class <- ifelse(new.y < 2, 1, 2)
-# plot(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2), main = 'Use glm() function directly')
-# points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
-# points(X[pred.class==1,1],X[pred.class==1,2],pch=0,col="green")
-# points(X[pred.class==2,1],X[pred.class==2,2],pch=0,col="blue")
-# 
-# }
+writeLines('Baysian Logistic Reg.(Kappa) Result:')
+print(table(pred.class, target.T))
+writeLines("")
+writeLines("")
 
