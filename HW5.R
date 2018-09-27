@@ -209,3 +209,33 @@ print(table(pred.class, target.T))
 writeLines("")
 writeLines("")
 
+
+## draw circle
+library(plotly)
+one.dim <- seq(-2,2,0.01)
+
+x <- combn(one.dim, m = 2)
+rev.x <-  rbind(x[2,],x[1,])
+all.x <- cbind(x,rev.x)
+all.x <- t(all.x)
+all.phi.x <- basis.fun(all.x)
+all.y <- apply(all.phi.x, 2, baysianApproximationSolution, w.map=w.new, Sn=Sn.new)
+pred.area <- ifelse( all.y < 0.5, 1, 2 )
+plot(all.x[pred.area==1,1], all.x[pred.area==1,2],col='purple', pch=16, xlim=c(-2,2),ylim=c(-2,2), main = 'Baysian Logistic Reg. (Kappa)')
+points(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green")
+points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
+points(X[pred.class==1,1],X[pred.class==1,2],pch=0,col="green")
+points(X[pred.class==2,1],X[pred.class==2,2],pch=0,col="blue")
+
+
+my.a <- t(w.new) %*% Phi_X
+plot(my.a[X[,3]==1], y = rep(0, sum(X[,3]==1)), pch=16,col="green", xlim=c(-15,15),ylim=c(-0.5,0.5), main = 'Data on decision space (one dim).')
+points(my.a[X[,3]==2], y = rep(0, sum(X[,3]==2)), pch=16,col="blue")
+
+my.plot.ly.data <- cbind(t(Phi_X), X[,3] )
+colnames(my.plot.ly.data) <- c('x1','x2','x3','class')
+my.plot.ly.data <- as.data.frame(my.plot.ly.data)
+plot_ly(my.plot.ly.data, x = ~x1, y = ~x2, z = ~x3,
+        marker = list(color = ~class, colorscale = c('red','green', 'blue'), showscale = FALSE))
+
+
