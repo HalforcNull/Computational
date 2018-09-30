@@ -126,7 +126,7 @@ target.T <- X[,3] - 1
 N <- 3
 
 
-for( i in 1:10000){
+for(i in 1:10000){
   # writeLines(paste0('Run ', i, '' ) )
   # writeLines('Old weight:')
   # writeLines(w.old)
@@ -210,6 +210,11 @@ writeLines("")
 writeLines("")
 
 
+
+
+
+
+
 ## draw circle
 library(plotly)
 one.dim <- seq(-2,2,0.01)
@@ -217,9 +222,19 @@ one.dim <- seq(-2,2,0.01)
 x <- combn(one.dim, m = 2)
 rev.x <-  rbind(x[2,],x[1,])
 all.x <- cbind(x,rev.x)
-all.x <- t(all.x)
+all.x <- expand.grid(x = one.dim, y = one.dim)
 all.phi.x <- basis.fun(all.x)
 all.y <- apply(all.phi.x, 2, baysianApproximationSolution, w.map=w.new, Sn=Sn.new)
+zmatrix <-  matrix( as.vector(all.y), nrow=length(one.dim), ncol=length(one.dim))
+dim(zmatrix)
+contour(x=one.dim, y=one.dim, z=zmatrix, levels=c(0.1,0.5,0.6,0.9), xlim = c(-2,2), ylim=c(-2,2))
+points(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green")
+points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
+points(X[pred.class==1,1],X[pred.class==1,2],pch=0,col="green")
+points(X[pred.class==2,1],X[pred.class==2,2],pch=0,col="blue")
+
+
+
 pred.area <- ifelse( all.y < 0.5, 1, 2 )
 plot(all.x[pred.area==1,1], all.x[pred.area==1,2],col='purple', pch=16, xlim=c(-2,2),ylim=c(-2,2), main = 'Baysian Logistic Reg. (Kappa)')
 points(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green")
