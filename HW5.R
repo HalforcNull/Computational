@@ -15,19 +15,6 @@ plot(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))
 points(X[X[,3]==2,1],X[X[,3]==2,2],pch=16,col="blue")
 
 
-# Create grid
-library(plotly)
-one.dim <- seq(-2,2,0.01)
-
-x <- combn(one.dim, m = 2)
-rev.x <-  rbind(x[2,],x[1,])
-all.x <- cbind(x,rev.x)
-all.x <- expand.grid(x = one.dim, y = one.dim)
-all.phi.x <- basis.fun(all.x)
-
-# Frequenist Logistic Reg.
-# Find weight value and use it to do predict
-
 # basis function
 basis.fun <- function(x){
   phi_1 <- dmvnorm(x, mean=rep(0,2),sigma = diag(2)*0.5)
@@ -42,6 +29,20 @@ sigma.fun <- function(w, Phi_X){
   a = t(w) %*% Phi_X
   return(as.vector(1/(1+exp(-a))))
 }
+
+
+# Create grid
+library(plotly)
+one.dim <- seq(-2,2,0.01)
+
+x <- combn(one.dim, m = 2)
+rev.x <-  rbind(x[2,],x[1,])
+all.x <- cbind(x,rev.x)
+all.x <- expand.grid(x = one.dim, y = one.dim)
+all.phi.x <- basis.fun(all.x)
+
+# Frequenist Logistic Reg.
+# Find weight value and use it to do predict
 
 #4.98
 matrix.R.fun <- function(y){
