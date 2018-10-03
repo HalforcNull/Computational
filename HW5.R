@@ -133,7 +133,6 @@ ln.w.t <- function(w.map, m0, S0, t.Vector, Phi_X){
   return(part.1+part.2+part.3)
 }
 
-
 # Sn_new = Sn_old^(-1) + t(Phi_X) * R * Phi_X
 find.Sn <- function(Sn.old, Phi_X, Updated.R){
 #  return(solve(Sn.old) + t(Phi_X) %*% Updated.R %*% Phi_X)
@@ -154,7 +153,12 @@ opmtTarget <- function(w.map){
   return(-ln.w.t(w.map, m0, S0, target.T, Phi_X))
 }
 
-optimResult <- optim(init.w.map, opmtTarget, hessian=TRUE)#, gr=gradientFunc)
+gradientFunc <- function(w.map){
+  y.Vector <- sigma.fun(w.map, Phi_X)
+  return((m0-w.map)%*%S0+(target.T-y.Vector)%*%t(Phi_X))
+}
+
+optimResult <- optim(init.w.map, opmtTarget, hessian=TRUE, gr=gradientFunc)
 w.new <- optimResult$par
 
 updated.y <- sigma.fun(w.new, Phi_X)
@@ -164,9 +168,16 @@ Sn.new <- find.Sn(S0, Phi_X, updated.R)
 
 ####################### Compare hessian matrix given by optim function 
 ####################### And Sn calculated by 4.143
-optimResult$hessian
-Sn.new
-
+writeLines('Baysian Logistic Logistic Reg. :')
+writeLines('')
+writeLines('Weight Map :')
+print(w.new)
+writeLines('')
+writeLines('Hessian v.s. Sn: ')
+print(-optimResult$hessian)
+print(Sn.new)
+writeLines('')
+writeLines('')
 
 # Step 2. Find Covlution
 
