@@ -23,9 +23,9 @@ calcMean <- function(k_the_pdf, training_t){
   return(sum(k_the_pdf * training_t))
 }
 
-calcVar <- function(k_the_pdf, training_t){
+calcVar <- function(k_the_pdf, training_t, hyperSd){
   new_t_mean <- calcMean(k_the_pdf, training_t)
-  return( sum( k_the_pdf * training_t^2) - new_t_mean^2 )
+  return( sum( k_the_pdf * ( training_t^2 + hyperSd ^ 2) ) - new_t_mean^2 )
 }
 
 
@@ -37,13 +37,13 @@ gfun.matrix <- apply( as.matrix(a),1, g.fun, xn = x, hyperSd = hyperSd)
 
 k_the_pdf <- apply( gfun.matrix,2, kernelFun )
 predictMean <- apply( k_the_pdf, 2, calcMean, training_t = t) + t.Mean
-predictVar <- apply( k_the_pdf, 2, calcVar, training_t = t)
+predictVar <- apply( k_the_pdf, 2, calcVar, training_t = t, hyperSd = hyperSd)
 predictSd <- sqrt(predictVar)
 PredMax <- predictMean + 1.95 * predictSd
 PredMin <- predictMean - 1.95 * predictSd
 
 # Step 5. Plot 
-plot(a, sin(2 * pi * a), type="l", col = 'red', xlim=range(c(0,1)), ylim=range(c(-1.5,1.5)))
+plot(a, sin(2 * pi * a), type="l", col = 'red', xlim=range(c(0,1)), ylim=range(c(-2,2)))
 points(x, t)
 
 points(a, predictMean, type="l", col = 'green')
