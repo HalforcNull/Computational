@@ -177,4 +177,4 @@ model.trained <- fun.getMode(training.dat, training.t, alpha, beta)
 # Step 4. do prediction on training data
 pre.label <- apply(training.dat, 1, fun.predict, model.trained)
 
-
+## Finish prediction code @ 2:49. Start debug now
