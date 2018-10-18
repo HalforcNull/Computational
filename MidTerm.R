@@ -49,8 +49,132 @@ data.df <- data.frame(x=c(w,y), y=c(x,z), class = rep(c(1,2),each=n))
 
 ### use data.df
 
+### Below is my solution
+### Start @ 10/18/2018 1:00 pm
+### Code won't be pushed to https://github.com/HalforcNull/Computational untill 10/19/2018 10:00 am
 
+# Kernel function
+## As told above
+fun.kernel <- function(x,b){
+    return(exp(-0.5*t(x-b)%*%(x-b)))
+}
 
+# Gram Matrix
+## Instead of calculate gram matrix directly, I need a support function
+## This support function takes training data and 2 index, then find the kernel of indexed data
+fun.gram.support <- function(training, x){
+    a <- training[x[1],]
+    b <- training[x[2],]
+    return(fun.kernel(a,b))
+}
+## Recall our K matrix is divided by alpha
+fun.gram <- function(training, alpha){
+    print(dim(training))
+    indexs <- seq(1, nrow(training), 1)
+    combIndex <- expand.grid(indexs, indexs)
+    my.result <- apply(combIndex, 1, fun.gram.support)
+    return(my.result/alpha)
+}
 
+# Calculate CN
+fun.CN <- function(Gram, beta){
+    gram.dim <- nrow(Gram)
+    return(Gram + diag(1/beta, nrow=gram.dim))
+}
+
+# Psi(aN) and related functions
+## functions need for Psi(aN)
+fun.sigmoid <- function(aN){
+    return(apply(aN, 1, function(x){1/(1+exp(-x))}))
+}
+## by 6.80 
+## remove the parts does not contain aN ( we are optimize Psi wrt. aN, so any part without aN can be treated as constant )
+fun.Psi.aN <- function(aN, tN, CN){
+    my.N <- length(tN)
+    return(-1/2*t(aN) %*% solve(CN) %*% aN + t(tN) %*% aN)
+}
+
+fun.Psi.gridiant <- function(aN, tN, CN){
+    sigma.aN <- fun.sigmoid(aN)
+    return(tN - sigma.aN - solve(CN) %*% aN)
+}
+
+## WN function
+fun.WN <- function(aN.Mode){
+    my.N <- length(aN.Mode)
+    sigma.aN <- fun.sigmoid(aN.Mode)
+    WN <- sigma.aN * (1 - sigma.aN)
+    return(WN)
+}
+
+## Hassian
+fun.Hassian <- function(WN, CN ){
+    return(WN + solve(CN))
+}
+
+# mu_a_new and var_a_new 
+## Function to find k vector (distance of new observation wrt. training)
+## Note: this function also need devided by alpha
+fun.k.vec <- function(dat.new, training, alpha){
+    return( apply(training, 1, fun.kernel, b=dat.new) / alpha)
+}
+## Function to find c 
+fun.c <- function(dat.new, alpha, beta){
+    return(fun.kernel(dat.new, dat.new)/alpha + 1/beta)
+}
+
+## by 6.87
+fun.mean.new <- function(k.vec, tN, aN.mode){
+    sigma.aN <- fun.sigmoid(aN.Mode)
+    return(t(k.vec)%*%(tN-sigma.aN))
+}
+
+## byt 6.88
+fun.var.new <- function(c.value, k.vec, WN, CN ){
+    return(c.value - t(k.vec) %*% solve(solve(WN) + CN) %*% k.vec)
+}
+
+# kappa solution
+fun.kappa.solution <- function(mu.a, var.a){
+    kappa <- 1/sqrt(1 + pi*var.a/8)
+    return(1/(1+exp(-kappa %*% t(mu.a))))
+}
+
+# predict function
+fun.getModel <- function(training, tN, alpha, beta){
+    ## find CN
+    m.Gram <- fun.gram(training.dat, alpha)
+    m.CN <- fun.CN(m.Gram, beta)
+    ## find aN.mode
+    aN.mode <- optim(rep(1,100), fn=fun.Psi.aN, gr=fun.Psi.gridiant, tN=training.t, CN=m.CN)
+    ## WN
+    m.WN <- fun.WN(aN.mode)
+    return(list(training=training, alpha=alpha, beta=beta, tN = tN, aN.mode = aN.mode,WN = m.WN, CN=m.CN))
+}
+
+fun.predict <- function(dat.new, my.model){
+    k.vec <- fun.k.vec(dat.new, my.model$training, my.model$alpha)
+    c.value <- fun.c(dat.new, my.model$alpha, my.model$beta)
+    mu.a <- fun.mean.new(k.vec, my.model$tN, my.model$aN.mode)
+    var.a <- fun.var.new(c.value, k.vec, my.model$WN, my.model$CN)
+    return(fun.kappa.solution(mu.a, var.a))
+}
+
+### above is the function we used for classification
+### now we need training our model
+
+# Step 1. training Data
+training.dat <- data.df[, -3]
+training.t <- data.df[, 3]
+
+# Step 2. Hyper parms
+alpha = 1
+beta = 1
+
+# Step 3. get model
+model.trained <- fun.getMode(training.dat, training.t, alpha, beta)
+
+# Step 4. do prediction on training data
+pre.label <- apply(training.dat, 1, fun.predict, model.trained)
 
 
