@@ -53,10 +53,12 @@ data.df <- data.frame(x=c(w,y), y=c(x,z), class = rep(c(1,2),each=n))
 ### Start @ 10/18/2018 1:00 pm
 ### Code won't be pushed to https://github.com/HalforcNull/Computational untill 10/19/2018 10:00 am
 
+library(Matrix)
+
 # Kernel function
 ## As told above
 fun.kernel <- function(x,b){
-    return(exp(-0.5*t(x-b)%*%(x-b)))
+    return(as.numeric(exp(-0.5*as.matrix(x-b)%*%as.matrix(t(x-b)))))
 }
 
 # Gram Matrix
@@ -65,14 +67,14 @@ fun.kernel <- function(x,b){
 fun.gram.support <- function(training, x){
     a <- training[x[1],]
     b <- training[x[2],]
-    return(fun.kernel(a,b))
+    return(ifelse(x[1]==x[2], 1,fun.kernel(a,b)))
 }
 ## Recall our K matrix is divided by alpha
 fun.gram <- function(training, alpha){
-    print(dim(training))
     indexs <- seq(1, nrow(training), 1)
     combIndex <- expand.grid(indexs, indexs)
-    my.result <- apply(combIndex, 1, fun.gram.support)
+    my.result <- apply(combIndex, 1, fun.gram.support, training=training)
+    my.result <- matrix(my.result, nrow=nrow(training))
     return(my.result/alpha)
 }
 
@@ -85,31 +87,31 @@ fun.CN <- function(Gram, beta){
 # Psi(aN) and related functions
 ## functions need for Psi(aN)
 fun.sigmoid <- function(aN){
-    return(apply(aN, 1, function(x){1/(1+exp(-x))}))
+    return(1/(1+exp(-aN)))
 }
 ## by 6.80 
 ## remove the parts does not contain aN ( we are optimize Psi wrt. aN, so any part without aN can be treated as constant )
 fun.Psi.aN <- function(aN, tN, CN){
     my.N <- length(tN)
-    return(-1/2*t(aN) %*% solve(CN) %*% aN + t(tN) %*% aN)
+    return(as.numeric(-1/2*t(aN) %*% solve(nearPD(CN)$mat) %*% aN + t(tN) %*% aN))
 }
 
 fun.Psi.gridiant <- function(aN, tN, CN){
     sigma.aN <- fun.sigmoid(aN)
-    return(tN - sigma.aN - solve(CN) %*% aN)
+    return(tN - sigma.aN - solve(nearPD(CN)$mat) %*% aN)
 }
 
 ## WN function
-fun.WN <- function(aN.Mode){
-    my.N <- length(aN.Mode)
-    sigma.aN <- fun.sigmoid(aN.Mode)
+fun.WN <- function(aN.mode){
+    my.N <- length(aN.mode)
+    sigma.aN <- fun.sigmoid(aN.mode)
     WN <- sigma.aN * (1 - sigma.aN)
-    return(WN)
+    return(diag(WN))
 }
 
 ## Hassian
 fun.Hassian <- function(WN, CN ){
-    return(WN + solve(CN))
+    return(WN + solve(nearPD(CN)$mat))
 }
 
 # mu_a_new and var_a_new 
@@ -120,18 +122,18 @@ fun.k.vec <- function(dat.new, training, alpha){
 }
 ## Function to find c 
 fun.c <- function(dat.new, alpha, beta){
-    return(fun.kernel(dat.new, dat.new)/alpha + 1/beta)
+    return(as.numeric(fun.kernel(dat.new, dat.new)/alpha + 1/beta))
 }
 
 ## by 6.87
 fun.mean.new <- function(k.vec, tN, aN.mode){
-    sigma.aN <- fun.sigmoid(aN.Mode)
-    return(t(k.vec)%*%(tN-sigma.aN))
+    sigma.aN <- fun.sigmoid(aN.mode)
+    return(as.numeric(k.vec%*%as.matrix(tN-sigma.aN)))
 }
 
 ## byt 6.88
 fun.var.new <- function(c.value, k.vec, WN, CN ){
-    return(c.value - t(k.vec) %*% solve(solve(WN) + CN) %*% k.vec)
+    return(c.value - as.numeric(t(k.vec) %*% solve(solve(nearPD(WN)$mat) + CN) %*% k.vec))
 }
 
 # kappa solution
@@ -146,10 +148,10 @@ fun.getModel <- function(training, tN, alpha, beta){
     m.Gram <- fun.gram(training.dat, alpha)
     m.CN <- fun.CN(m.Gram, beta)
     ## find aN.mode
-    aN.mode <- optim(rep(1,100), fn=fun.Psi.aN, gr=fun.Psi.gridiant, tN=training.t, CN=m.CN)
+    aN.mode <- optim(rep(0,100), fn=fun.Psi.aN, gr=fun.Psi.gridiant, tN=training.t, CN=m.CN)
     ## WN
-    m.WN <- fun.WN(aN.mode)
-    return(list(training=training, alpha=alpha, beta=beta, tN = tN, aN.mode = aN.mode,WN = m.WN, CN=m.CN))
+    m.WN <- fun.WN(aN.mode$par)
+    return(list(training=training, alpha=alpha, beta=beta, tN = tN, aN.mode = aN.mode$par,WN = m.WN, CN=m.CN))
 }
 
 fun.predict <- function(dat.new, my.model){
@@ -161,20 +163,66 @@ fun.predict <- function(dat.new, my.model){
 }
 
 ### above is the function we used for classification
-### now we need training our model
 
-# Step 1. training Data
-training.dat <- data.df[, -3]
-training.t <- data.df[, 3]
 
-# Step 2. Hyper parms
-alpha = 1
-beta = 1
 
-# Step 3. get model
-model.trained <- fun.getMode(training.dat, training.t, alpha, beta)
 
-# Step 4. do prediction on training data
-pre.label <- apply(training.dat, 1, fun.predict, model.trained)
+
+
+########################################################################################################
+###       Delivered Function: 
+###           fun.predict.prob.in.class1
+###       Input: 
+###           trainingData: training data,     N * 3 matrix, first 2 column is data, 3rd column is class
+###           newData: testing data,      n * 2 matrix, first 2 column is data
+###       Output:
+###           A vector contains the prob of being in class 1
+########################################################################################################
+
+fun.predict.prob.in.class1 <- function(trainingData, newData){
+    if(ncol(training.dat) == 3){
+      print('We need have a N * 3 matrix for training')
+      return(NULL)
+    }
+  
+    if(ncol(newData) != 2){
+      print('We need have a n * 2 matrix for testing')
+      return(NULL)
+    }
+    
+    # Step 1. training Data
+    training.dat <- trainingData[, -3]
+    training.t <- trainingData[, 3] - 1
+    
+    # Step 2. Hyper parms
+    alpha = 1
+    beta = 1
+    
+    # Step 3. get model
+    model.trained <- fun.getModel(training.dat, training.t, alpha, beta)
+    
+    # Step 4. do prediction on training data
+    # pre.label <- apply(training.dat, 1, fun.predict, my.model=model.trained)
+    # for some reason, this apply function is not work well
+    pre.prob <- NULL
+    for( i in 1:nrow(newData) ){
+      pre.prob <- c(pre.prob, fun.predict(newData[i,], model.trained))
+    }
+    
+    return(1-pre.prob)
+}
+
+###                 END OF FUNCTION       
+
+
+
+
+### try classify training data
+pred.prob <- fun.predict.prob.in.class1(data.df, data.df[,-3])
+ifelse(pred.prob > 0.5, 1, 2)
+data.df[,3]
 
 ## Finish prediction code @ 2:49. Start debug now
+## Finish Debug @ 4:25
+## Finish delivered function @ 4:49
+
