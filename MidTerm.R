@@ -145,10 +145,10 @@ fun.kappa.solution <- function(mu.a, var.a){
 # predict function
 fun.getModel <- function(training, tN, alpha, beta){
     ## find CN
-    m.Gram <- fun.gram(training.dat, alpha)
+    m.Gram <- fun.gram(training, alpha)
     m.CN <- fun.CN(m.Gram, beta)
     ## find aN.mode
-    aN.mode <- optim(rep(0,100), fn=fun.Psi.aN, gr=fun.Psi.gridiant, tN=training.t, CN=m.CN)
+    aN.mode <- optim(rep(0,100), fn=fun.Psi.aN, gr=fun.Psi.gridiant, tN=tN, CN=m.CN)
     ## WN
     m.WN <- fun.WN(aN.mode$par)
     return(list(training=training, alpha=alpha, beta=beta, tN = tN, aN.mode = aN.mode$par,WN = m.WN, CN=m.CN))
@@ -180,7 +180,7 @@ fun.predict <- function(dat.new, my.model){
 ########################################################################################################
 
 fun.predict.prob.in.class1 <- function(trainingData, newData){
-    if(ncol(training.dat) == 3){
+    if(ncol(trainingData) != 3){
       print('We need have a N * 3 matrix for training')
       return(NULL)
     }
