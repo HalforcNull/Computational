@@ -49,7 +49,7 @@ Gram_diag_element <- function(x, distanceFun){
 }
 
 GramMat <- function(xVec,kernelFun){
-    Gram_diag <- diag( apply(xVec, 3, Gram_diag_element, distanceFun = kernelFun) ) # n * n diag
+    Gram_diag <- diag( apply(xVec, 1, Gram_diag_element, distanceFun = kernelFun) ) # n * n diag
     Gram_dist <- proxy::dist(xVec, method=kernelFun) # n-1 * n-1 mat
     
     return(as.matrix(Gram_dist) + Gram_diag)
@@ -57,7 +57,7 @@ GramMat <- function(xVec,kernelFun){
 
 # Dmat
 DMat <- function(Tvec, GramMat){
-    return(t(Tvec) %*% Tvec %*% GramMat)
+    return(Tvec %*% t(Tvec) * GramMat)
 }
 
 # dvec
