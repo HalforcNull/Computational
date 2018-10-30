@@ -1,4 +1,5 @@
 library(mvtnorm)
+library(quadprog)
 
 #### HW chapter 7
 ####
@@ -22,6 +23,48 @@ X <- rbind(x1.tmp,x2.tmp,x3.tmp)
 # plot
 plot(X[X[,3]==-1,1],X[X[,3]==-1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))
 points(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="lightblue")
+
+# kenrel 1
+ker_1 <- function(x,y){
+    return(exp(-0.5 * t(x-y) %*% (x-y)))
+}
+
+# Phi 2
+Phi_2 <- function(x){
+    dnorm_1 <- dmvnorm(x, c(-1,-1), diag(2))
+    dnorm_2 <- dmvnorm(x, c(0,0), diag(2))
+    return(c(dnorm_1, dnorm_2))
+}
+
+# kernel 2
+ker_2 <- function(x,y){
+    return(Phi_2(x) * Phi_2(y))
+}
+
+# Dmat
+DMat <- function(Tvec, GramMat){
+    return(t(Tvec) %*% Tvec %*% GramMat)
+}
+
+# dvec
+dVec <- function(n){
+    return(rep(1,n))
+}
+
+# Amat
+AMat <- function(tn){
+    IMat <- diag(length(tn))
+    return(cbind(tn, IMat))
+}
+
+# bvec
+bVec <- function(n){
+    return(rep(1,n+1))
+}
+
+
+
+
 
 
 
