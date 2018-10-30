@@ -122,6 +122,9 @@ blueIdx <- which(tN==1)
 model.pts <- apply(model.2.data,1,Phi_2)
 model.pts <- t(model.pts)
 
+one.dim <- seq(-2,2,0.01)
+all.x <- expand.grid(x = one.dim, y = one.dim)
+
 plot(PhiSpaceLoc[greenIdx,1], PhiSpaceLoc[greenIdx,2], pch=16,col="green",xlim=c(0,0.2),ylim=c(0,0.2))
 points(PhiSpaceLoc[blueIdx,1], PhiSpaceLoc[blueIdx,2], pch=16,col="lightblue")
 points(model.pts[, 1], model.pts[, 2], pch=1,col='red')
