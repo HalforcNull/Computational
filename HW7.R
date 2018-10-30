@@ -1,6 +1,7 @@
 library(mvtnorm)
 library(quadprog)
 library(proxy)
+library(Matrix)
 #### HW chapter 7
 ####
 #### Part 1
@@ -58,6 +59,7 @@ GramMat <- function(xVec,kernelFun){
 # Dmat
 DMat <- function(Tvec, GramMat){
     return(Tvec %*% t(Tvec) * GramMat)
+    # In our case Tvec %*% t(Tvec) provides a 'sign' matrix for GramMat
 }
 
 # dvec
@@ -73,7 +75,7 @@ AMat <- function(tn){
 
 # bvec
 bVec <- function(n){
-    return(rep(1,n+1))
+    return(rep(0,n+1))
 }
 
 
@@ -90,5 +92,7 @@ DVector_1 <- dVec(length(tN))
 AMatrix_1 <- AMat(tN)
 bVector_1 <- bVec(length(tN))
 
-Solution_1 <- solve.QP(DMatrix_1, DVector_1, AMatrix_1, bVector_1, meq=1)
+Solution_1 <- solve.QP(nearPD(DMatrix_1)$mat, DVector_1, AMatrix_1, bVector_1, meq=1)
+
+importantPointIndex <- which(Solution_1$solution > 0.001)
 
