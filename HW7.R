@@ -39,7 +39,7 @@ Phi_2 <- function(x){
 
 # kernel 2
 ker_2 <- function(x,y){
-    return(Phi_2(x) * Phi_2(y))
+    return(Phi_2(x) %*% Phi_2(y))
 }
 
 # Calculate grad matrix
@@ -94,5 +94,39 @@ bVector_1 <- bVec(length(tN))
 
 Solution_1 <- solve.QP(nearPD(DMatrix_1)$mat, DVector_1, AMatrix_1, bVector_1, meq=1)
 
-importantPointIndex <- which(Solution_1$solution > 0.001)
+importantPointIndex <- which(Solution_1$solution > 0.1)
+model.1.data <- xVec[importantPointIndex,]
+points(model.1.data[, 1], model.1.data[, 2], pch=1,col='red')
+
+#### Part 1.2 using k(x,y) = <phi(x),phi(y)> where phi(x) = [dnorm(x,mu1,sig),dnorm(x,mu2,sig)] where mu1 = c(0,0), mu2=c(-1,-1), sig = diag(2)
+GramMatrix_2 <- GramMat(xVec, ker_2)
+DMatrix_2 <- DMat(tN, GramMatrix_2)
+DVector_2 <- dVec(length(tN))
+AMatrix_2 <- AMat(tN)
+bVector_2 <- bVec(length(tN))
+
+Solution_2 <- solve.QP(nearPD(DMatrix_2)$mat, DVector_2, AMatrix_2, bVector_2, meq=1)
+importantPointIndex <- which(Solution_2$solution > 0.1)
+model.2.data <- xVec[importantPointIndex,]
+plot(X[X[,3]==-1,1],X[X[,3]==-1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))
+points(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="lightblue")
+points(model.2.data[, 1], model.2.data[, 2], pch=1,col='red')
+
+
+#### Part 1.3 verify that the separation of 1.2 is linear in the space defined by phi()
+
+PhiSpaceLoc <- apply(xVec,1,Phi_2)
+PhiSpaceLoc <- t(PhiSpaceLoc)
+greenIdx <- which(tN==-1)
+blueIdx <- which(tN==1)
+model.pts <- apply(model.2.data,1,Phi_2)
+model.pts <- t(model.pts)
+
+plot(PhiSpaceLoc[greenIdx,1], PhiSpaceLoc[greenIdx,2], pch=16,col="green",xlim=c(0,0.2),ylim=c(0,0.2))
+points(PhiSpaceLoc[blueIdx,1], PhiSpaceLoc[blueIdx,2], pch=16,col="lightblue")
+points(model.pts[, 1], model.pts[, 2], pch=1,col='red')
+
+
+
+
 
