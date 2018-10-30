@@ -41,6 +41,20 @@ ker_2 <- function(x,y){
     return(Phi_2(x) * Phi_2(y))
 }
 
+# Calculate grad matrix
+## sub function: calculate the diag
+## Only allow calculate one element 
+Gram_diag_element <- function(x, distanceFun){
+    return(distanceFun(x,x))
+}
+
+GramMat <- function(xVec,kernelFun){
+    Gram_diag <- diag( apply(xVec, 3, Gram_diag_element, distanceFun = kernelFun) ) # n * n diag
+    Gram_dist <- proxy::dist(xVec, method=kernelFun) # n-1 * n-1 mat
+    
+    return(as.matrix(Gram_dist) + Gram_diag)
+}
+
 # Dmat
 DMat <- function(Tvec, GramMat){
     return(t(Tvec) %*% Tvec %*% GramMat)
@@ -62,25 +76,19 @@ bVec <- function(n){
     return(rep(1,n+1))
 }
 
-# Calculate grad matrix
-## sub function: calculate the diag
-## Only allow calculate one element 
-Gram_diag_element <- function(x, distanceFun){
-    if(length(x) > 1){
-        print('Does not allow vector')
-    }
-
-    return(distanceFun(x,x))
-}
-
-GramMat <- function(xVec,kernelFun){
-    Gram_diag <- diag( sapply(xVec, Gram_diag_element, distanceFun = kernelFun) ) # n * n diag
-    Gram_btm <- proxy::dist(xVec, method=kernelFun) # n-1 * n-1 mat
-    Gram_btm_full <- rbind(rep(0,length(xVec)), cbind(Gram_btm, rep(0, length(xVec)-1)))
-    return(Gram_btm_full + Gram_diag + t(Gram_btm_full))
-}
 
 
+#### Data:
 
+xVec <- X[,1:2]
+tN <- X[,3]
 
+#### Part 1.1 using k(x,y) = exp(-0.5*t(x-y)%*%(x-y))
+GramMatrix_1 <- GramMat(xVec, ker_1)
+DMatrix_1 <- DMat(tN, GramMatrix_1)
+DVector_1 <- dVec(length(tN))
+AMatrix_1 <- AMat(tN)
+bVector_1 <- bVec(length(tN))
+
+Solution_1 <- solve.QP(DMatrix_1, DVector_1, AMatrix_1, bVector_1, meq=1)
 
