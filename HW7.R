@@ -1,6 +1,6 @@
 library(mvtnorm)
 library(quadprog)
-
+library(proxy)
 #### HW chapter 7
 ####
 #### Part 1
@@ -62,7 +62,23 @@ bVec <- function(n){
     return(rep(1,n+1))
 }
 
+# Calculate grad matrix
+## sub function: calculate the diag
+## Only allow calculate one element 
+Gram_diag_element <- function(x, distanceFun){
+    if(length(x) > 1){
+        print('Does not allow vector')
+    }
 
+    return(distanceFun(x,x))
+}
+
+GramMat <- function(xVec,kernelFun){
+    Gram_diag <- diag( sapply(xVec, Gram_diag_element, distanceFun = kernelFun) ) # n * n diag
+    Gram_btm <- proxy::dist(xVec, method=kernelFun) # n-1 * n-1 mat
+    Gram_btm_full <- rbind(rep(0,length(xVec)), cbind(Gram_btm, rep(0, length(xVec)-1)))
+    return(Gram_btm_full + Gram_diag + t(Gram_btm_full))
+}
 
 
 
