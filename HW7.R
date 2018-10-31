@@ -96,6 +96,9 @@ Solution_1 <- solve.QP(nearPD(DMatrix_1)$mat, DVector_1, AMatrix_1, bVector_1, m
 
 importantPointIndex <- which(Solution_1$solution > 0.1)
 model.1.data <- xVec[importantPointIndex,]
+plot(X[X[,3]==-1,1],X[X[,3]==-1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))
+title("Part 1.1 Training Data and Model used data (red circled)")
+points(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="lightblue")
 points(model.1.data[, 1], model.1.data[, 2], pch=1,col='red')
 
 #### Part 1.2 using k(x,y) = <phi(x),phi(y)> where phi(x) = [dnorm(x,mu1,sig),dnorm(x,mu2,sig)] where mu1 = c(0,0), mu2=c(-1,-1), sig = diag(2)
@@ -109,6 +112,7 @@ Solution_2 <- solve.QP(nearPD(DMatrix_2)$mat, DVector_2, AMatrix_2, bVector_2, m
 importantPointIndex <- which(Solution_2$solution > 0.1)
 model.2.data <- xVec[importantPointIndex,]
 plot(X[X[,3]==-1,1],X[X[,3]==-1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))
+title("Part 1.2 Training Data and Model used data (red circled)")
 points(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="lightblue")
 points(model.2.data[, 1], model.2.data[, 2], pch=1,col='red')
 
@@ -122,14 +126,28 @@ blueIdx <- which(tN==1)
 model.pts <- apply(model.2.data,1,Phi_2)
 model.pts <- t(model.pts)
 
+An <- Solution_2$solution[importantPointIndex]
+weight <- colSums(An * tN[importantPointIndex] * model.pts)
+linear.model.b <- tN[1] - (model.pts %*% weight)[1,1]
+
 one.dim <- seq(-2,2,0.01)
 all.x <- expand.grid(x = one.dim, y = one.dim)
+phi.all.x <- apply(all.x,1,Phi_2)
+phi.all.x <- t(phi.all.x)
+all.y <- phi.all.x %*% weight + linear.model.b
+
+greenLineIdx <- which(abs(all.y + 1) < 0.001)
+blackLineIdx <- which(abs(all.y) < 0.001)
+blueLineIdx <- which(abs(all.y - 1) < 0.001)
 
 plot(PhiSpaceLoc[greenIdx,1], PhiSpaceLoc[greenIdx,2], pch=16,col="green",xlim=c(0,0.2),ylim=c(0,0.2))
+title("Part 1.2 Training Data and Decision on Phi Space")
 points(PhiSpaceLoc[blueIdx,1], PhiSpaceLoc[blueIdx,2], pch=16,col="lightblue")
 points(model.pts[, 1], model.pts[, 2], pch=1,col='red')
 
-
+points(phi.all.x[greenLineIdx,1], phi.all.x[greenLineIdx,2], type='l', col="green")
+points(phi.all.x[blackLineIdx,1], phi.all.x[blackLineIdx,2], type='l', col="black")
+points(phi.all.x[blueLineIdx,1], phi.all.x[blueLineIdx,2], type='l', col="blue")
 
 
 
