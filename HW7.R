@@ -78,12 +78,27 @@ bVec <- function(n){
     return(rep(0,n+1))
 }
 
+# calculate B
+findB <- function(tN, aN, Gmat){
+    bN <- tN - colSums(aN * tN * Gmat)
+    return(mean(bN))
+}
 
+# prediction
+calcY <- function(xNew, tN, aN, xVec, b.num, kenrelFun){
+    GramCol <- apply(xVec, 1, kenrelFun, y=xNew)
+    return( sum(aN*tN*GramCol) + b.num )
+}
 
-#### Data:
+#### Data: Training
 
 xVec <- X[,1:2]
 tN <- X[,3]
+
+#### Data: Predicting
+one.dim <- seq(-2,2,0.01)
+all.x <- expand.grid(x = one.dim, y = one.dim)
+
 
 #### Part 1.1 using k(x,y) = exp(-0.5*t(x-y)%*%(x-y))
 GramMatrix_1 <- GramMat(xVec, ker_1)
@@ -96,10 +111,21 @@ Solution_1 <- solve.QP(nearPD(DMatrix_1)$mat, DVector_1, AMatrix_1, bVector_1, m
 
 importantPointIndex <- which(Solution_1$solution > 0.1)
 model.1.data <- xVec[importantPointIndex,]
-plot(X[X[,3]==-1,1],X[X[,3]==-1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))
+
+b_1 <- findB(tN[importantPointIndex], Solution_1$solution[importantPointIndex], GramMatrix_1[importantPointIndex,importantPointIndex])
+prediction_1 <- apply(  all.x, 1, calcY, tN = tN[importantPointIndex], 
+                        aN = Solution_1$solution[importantPointIndex], 
+                        xVec = xVec[importantPointIndex,], 
+                        b.num = b_1,
+                        kenrelFun = ker_1)
+
+predic_1_matrix <- matrix(prediction_1, nrow = length(one.dim))
+contour(x=one.dim, y=one.dim, z=predic_1_matrix, level=c(-1,0,1), xlim = c(-2,2), ylim=c(-2,2))
 title("Part 1.1 Training Data and Model used data (red circled)")
+points(X[X[,3]==-1,1],X[X[,3]==-1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))
 points(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="lightblue")
 points(model.1.data[, 1], model.1.data[, 2], pch=1,col='red')
+
 
 #### Part 1.2 using k(x,y) = <phi(x),phi(y)> where phi(x) = [dnorm(x,mu1,sig),dnorm(x,mu2,sig)] where mu1 = c(0,0), mu2=c(-1,-1), sig = diag(2)
 GramMatrix_2 <- GramMat(xVec, ker_2)
@@ -111,7 +137,17 @@ bVector_2 <- bVec(length(tN))
 Solution_2 <- solve.QP(nearPD(DMatrix_2)$mat, DVector_2, AMatrix_2, bVector_2, meq=1)
 importantPointIndex <- which(Solution_2$solution > 0.1)
 model.2.data <- xVec[importantPointIndex,]
-plot(X[X[,3]==-1,1],X[X[,3]==-1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))
+
+b_2 <- findB(tN[importantPointIndex], Solution_2$solution[importantPointIndex], GramMatrix_2[importantPointIndex,importantPointIndex])
+prediction_2 <- apply(  all.x, 1, calcY, tN = tN[importantPointIndex], 
+                        aN = Solution_2$solution[importantPointIndex], 
+                        xVec = xVec[importantPointIndex,], 
+                        b.num = b_2,
+                        kenrelFun = ker_2)
+
+predic_2_matrix <- matrix(prediction_2, nrow = length(one.dim))
+contour(x=one.dim, y=one.dim, z=predic_2_matrix, level=c(-1,0,1), xlim = c(-2,2), ylim=c(-2,2))
+points(X[X[,3]==-1,1],X[X[,3]==-1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))
 title("Part 1.2 Training Data and Model used data (red circled)")
 points(X[X[,3]==1,1],X[X[,3]==1,2],pch=16,col="lightblue")
 points(model.2.data[, 1], model.2.data[, 2], pch=1,col='red')
@@ -121,24 +157,17 @@ points(model.2.data[, 1], model.2.data[, 2], pch=1,col='red')
 
 PhiSpaceLoc <- apply(xVec,1,Phi_2)
 PhiSpaceLoc <- t(PhiSpaceLoc)
-greenIdx <- which(tN==-1)
-blueIdx <- which(tN==1)
+
 model.pts <- apply(model.2.data,1,Phi_2)
 model.pts <- t(model.pts)
 
-An <- Solution_2$solution[importantPointIndex]
-weight <- colSums(An * tN[importantPointIndex] * model.pts)
-linear.model.b <- tN[1] - (model.pts %*% weight)[1,1]
-
-one.dim <- seq(-2,2,0.01)
-all.x <- expand.grid(x = one.dim, y = one.dim)
 phi.all.x <- apply(all.x,1,Phi_2)
 phi.all.x <- t(phi.all.x)
-all.y <- phi.all.x %*% weight + linear.model.b
+# all.y <- phi.all.x %*% weight + linear.model.b
 
-greenLineIdx <- which(abs(all.y + 1) < 0.001)
-blackLineIdx <- which(abs(all.y) < 0.001)
-blueLineIdx <- which(abs(all.y - 1) < 0.001)
+greenLineIdx <- which(abs(prediction_2 + 1) < 0.01)
+blackLineIdx <- which(abs(prediction_2) < 0.01)
+blueLineIdx <- which(abs(prediction_2 - 1) < 0.01)
 
 plot(PhiSpaceLoc[greenIdx,1], PhiSpaceLoc[greenIdx,2], pch=16,col="green",xlim=c(0,0.2),ylim=c(0,0.2))
 title("Part 1.2 Training Data and Decision on Phi Space")
