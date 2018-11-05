@@ -11,7 +11,11 @@ X <- rbind(x1.tmp,x2.tmp,x3.tmp)
 
 
 
-# Solution: Most of the HW7 code are reusable. Directly copy from HW7.R
+# Solution: Most of the HW7 code are reusable. 
+# For the reusable part, directly copy from HW7.R
+# Changes:
+#   1. dvec, since the minimize target function changed
+#   2. AMat and bvect, since the constrain is changed
 
 # modify X to have correct class indices
 X[X[,3]==1,3] <- -1
@@ -60,6 +64,7 @@ AMat <- function(tn){
 }
 
 # bvec
+# This is different from HW7
 bVec <- function(n, Nu){
     c1 <- rep(0,n+1)
     c2 <- rep(-1/n, n)
