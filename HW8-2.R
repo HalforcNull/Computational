@@ -69,11 +69,12 @@ AMat <- function(mLen){
     IMat <- diag(mLen)
     ZeroMat <- matrix(0, nrow=mLen, ncol=mLen)
     mat1 <- c(rep(1, mLen), rep(-1, mLen))
-    mat2 <- cbind(IMat, ZeroMat)
-    mat3 <- cbind(ZeroMat, IMat)
-    mat4 <- -mat2
+    mat2 <- rep(1, 2*mLen)
+    mat3 <- cbind(IMat, ZeroMat)
+    mat4 <- cbind(ZeroMat, IMat)
     mat5 <- -mat3
-    mat6 <- rep(1, 2*mLen)
+    mat6 <- -mat4
+    
     result <- rbind(mat1, mat2, mat3, mat4, mat5, mat6)
     rownames(result) <- NULL
     return(t(result))
@@ -81,7 +82,7 @@ AMat <- function(mLen){
 
 # bvec
 bVec <- function(HyperC, mLen, Nu){
-    return(c( rep(0,2*mLen+1), rep(-HyperC/mLen, 2*mLen), HyperC*Nu))
+    return(c( 0, HyperC*Nu, rep(0,2*mLen), rep(-HyperC/mLen, 2*mLen)))
 }
 
 # calculate B 7.69 and the equaltion we discuss during class
@@ -99,8 +100,8 @@ calcY <- function(xNew, aN, aN_hat, xVec, b.num, kenrelFun){
 
 xVec <- xN
 eps <- 0.2
-HyperC <- 3
-Nu <- 0.1
+HyperC <- 1
+Nu <- 0.001
 
 # kernel 1 = abs(x1-x2)
 GramMatrix_1 <- GramMat(xVec, ker_1) 
@@ -113,6 +114,9 @@ Solution_1 <- solve.QP(nearPD(DMatrix_1)$mat, DVector_1, AMatrix_1, bVector_1, m
 Solution_1$solution
 
 importantPointIndex <- which(abs(Solution_1$solution) > 0.1)
-model.1.data <- rbind(x[importantPointIndex], xVec[importantPointIndex])
-
+importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20, importantPointIndex)
+plot(x,sin(2*pi*x),type="l",col="green")
+points(xN,tN,col="blue",pch=16)
+model.1.data <- rbind(xVec[importantPointIndex], tN[importantPointIndex])
+model.1.data <- t(model.1.data)
 
