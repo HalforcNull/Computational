@@ -98,8 +98,8 @@ calcY <- function(xNew, aN, aN_hat, xVec, b.num, kenrelFun){
 # data 
 
 xVec <- xN
-eps <- 0.3
-HyperC <- 1
+eps <- 0.2
+HyperC <- 3
 Nu <- 0.1
 
 # kernel 1 = abs(x1-x2)
@@ -110,3 +110,9 @@ AMatrix_1 <- AMat(length(tN))
 bVector_1 <- bVec(HyperC, length(tN), Nu)
 
 Solution_1 <- solve.QP(nearPD(DMatrix_1)$mat, DVector_1, AMatrix_1, bVector_1, meq=1)
+Solution_1$solution
+
+importantPointIndex <- which(abs(Solution_1$solution) > 0.1)
+model.1.data <- rbind(x[importantPointIndex], xVec[importantPointIndex])
+
+
