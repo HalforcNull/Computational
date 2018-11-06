@@ -83,4 +83,19 @@ bVec <- function(HyperC, mLen, Nu){
     return(c( rep(0,mLen+1), rep(-HyperC/mLen, mLen), HyperC*Nu))
 }
 
+# calculate B 7.69 and the equaltion we discuss during class
+findB <- function(tN, aN, aN_Hat, Gmat, Nu ){
+    bN <- tN - Nu - colSums((aN - aN_Hat) * Gmat)
+    return(mean(bN))
+}
+
+# Predict
+calcY <- function(xNew, aN, aN_hat, xVec, b.num, kenrelFun){
+    retrun( sum( (aN - aN_hat) * kernelFun(xVec, xNew) ) + b.num )
+}
+
+
+
+
+
 
