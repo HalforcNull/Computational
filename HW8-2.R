@@ -1,5 +1,6 @@
-
 library(mvtnorm)
+library(quadprog)
+library(proxy)
 library(Matrix)
 
 set.seed(76757)
@@ -69,18 +70,18 @@ AMat <- function(mLen){
     ZeroMat <- matrix(0, nrow=mLen, ncol=mLen)
     mat1 <- c(rep(1, mLen), rep(-1, mLen))
     mat2 <- cbind(IMat, ZeroMat)
-    mat3 <- cbind(ZeroMat, Imat)
+    mat3 <- cbind(ZeroMat, IMat)
     mat4 <- -mat2
     mat5 <- -mat3
     mat6 <- rep(1, 2*mLen)
     result <- rbind(mat1, mat2, mat3, mat4, mat5, mat6)
     rownames(result) <- NULL
-    return(result)
+    return(t(result))
 }
 
 # bvec
 bVec <- function(HyperC, mLen, Nu){
-    return(c( rep(0,mLen+1), rep(-HyperC/mLen, mLen), HyperC*Nu))
+    return(c( rep(0,2*mLen+1), rep(-HyperC/mLen, 2*mLen), HyperC*Nu))
 }
 
 # calculate B 7.69 and the equaltion we discuss during class
@@ -94,8 +95,18 @@ calcY <- function(xNew, aN, aN_hat, xVec, b.num, kenrelFun){
     retrun( sum( (aN - aN_hat) * kernelFun(xVec, xNew) ) + b.num )
 }
 
+# data 
 
+xVec <- xN
+eps <- 0.3
+HyperC <- 1
+Nu <- 0.1
 
+# kernel 1 = abs(x1-x2)
+GramMatrix_1 <- GramMat(xVec, ker_1) 
+DMatrix_1 <- DMat(GramMatrix_1)
+DVector_1 <- dVec(eps, tN)
+AMatrix_1 <- AMat(length(tN))
+bVector_1 <- bVec(HyperC, length(tN), Nu)
 
-
-
+Solution_1 <- solve.QP(nearPD(DMatrix_1)$mat, DVector_1, AMatrix_1, bVector_1, meq=1)
