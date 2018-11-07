@@ -69,7 +69,7 @@ AMat <- function(mLen){
     IMat <- diag(mLen)
     ZeroMat <- matrix(0, nrow=mLen, ncol=mLen)
     mat1 <- c(rep(1, mLen), rep(-1, mLen))
-    mat2 <- rep(1, 2*mLen)
+    mat2 <- rep(-1, 2*mLen)
     mat3 <- cbind(IMat, ZeroMat)
     mat4 <- cbind(ZeroMat, IMat)
     mat5 <- -mat3
@@ -82,7 +82,7 @@ AMat <- function(mLen){
 
 # bvec
 bVec <- function(HyperC, mLen, Nu){
-    return(c( 0, HyperC*Nu, rep(0,2*mLen), rep(-HyperC/mLen, 2*mLen)))
+    return(c( 0, -HyperC*Nu, rep(0,2*mLen), rep(-HyperC/mLen, 2*mLen)))
 }
 
 # calculate B 7.69 and the equaltion we discuss during class
@@ -99,9 +99,9 @@ calcY <- function(xNew, aN, aN_hat, xVec, b.num, kenrelFun){
 # data 
 
 xVec <- xN
-eps <- 0.2
+eps <- 0.3
 HyperC <- 1
-Nu <- 0.001
+Nu <- 0.3
 
 # kernel 1 = abs(x1-x2)
 GramMatrix_1 <- GramMat(xVec, ker_1) 
@@ -113,10 +113,21 @@ bVector_1 <- bVec(HyperC, length(tN), Nu)
 Solution_1 <- solve.QP(nearPD(DMatrix_1)$mat, DVector_1, AMatrix_1, bVector_1, meq=1)
 Solution_1$solution
 
-importantPointIndex <- which(abs(Solution_1$solution) > 0.1)
-importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20, importantPointIndex)
-plot(x,sin(2*pi*x),type="l",col="green")
-points(xN,tN,col="blue",pch=16)
+importantPointIndex <- which(abs(Solution_1$solution) > 0.001)
+#importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20, importantPointIndex)
+importantPointIndex_aN <- importantPointIndex[which(importantPointIndex <= 20)]
+importantPointIndex_aN_hat <- importantPointIndex[which(importantPointIndex > 20)] - 20
+importantPointIndex <- importantPointIndex_aN[importantPointIndex_aN %in% importantPointIndex_aN_hat]
+importantPointIndex
+
 model.1.data <- rbind(xVec[importantPointIndex], tN[importantPointIndex])
 model.1.data <- t(model.1.data)
 
+plot(x,sin(2*pi*x),type="l",col="green")
+points(xN,tN,col="blue",pch=16)
+points(model.1.data[, 1], model.1.data[, 2], pch=1,col='red')
+
+
+
+b.num <- findB()
+predictY <- calcY(x, Solution_1$solution[importantPointIndex_aN], Solution_1$solution[importantPointIndex_aN_hat], xVec)
