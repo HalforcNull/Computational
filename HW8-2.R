@@ -46,7 +46,7 @@ Gram_diag_element <- function(x, distanceFun){
 }
 
 GramMat <- function(xVec,kernelFun){
-    Gram_diag <- diag( Gram_diag_element(xVec, kernelFun) ) # n * n diag
+    Gram_diag <- diag( Gram_diag_element(xVec, kernelFun), length(xVec) ) # n * n diag
     Gram_dist <- proxy::dist(xVec, method=kernelFun) # n-1 * n-1 mat
     
     return(as.matrix(Gram_dist) + Gram_diag)
@@ -100,7 +100,7 @@ calcY <- function(xNew, aN, aN_hat, xVec, b.num, kenrelFun){
 
 xVec <- xN
 eps <- 0.3
-HyperC <- 1
+HyperC <- 5
 Nu <- 0.3
 
 # kernel 1 = abs(x1-x2)
@@ -117,7 +117,8 @@ importantPointIndex <- which(abs(Solution_1$solution) > 0.001)
 #importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20, importantPointIndex)
 importantPointIndex_aN <- importantPointIndex[which(importantPointIndex <= 20)]
 importantPointIndex_aN_hat <- importantPointIndex[which(importantPointIndex > 20)] - 20
-importantPointIndex <- importantPointIndex_aN[importantPointIndex_aN %in% importantPointIndex_aN_hat]
+importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20, importantPointIndex)
+importantPointIndex <- unique(importantPointIndex)
 importantPointIndex
 
 model.1.data <- rbind(xVec[importantPointIndex], tN[importantPointIndex])
@@ -127,7 +128,38 @@ plot(x,sin(2*pi*x),type="l",col="green")
 points(xN,tN,col="blue",pch=16)
 points(model.1.data[, 1], model.1.data[, 2], pch=1,col='red')
 
+# using kernel 1 cannot fit a good model
+
+# kernel 2 =  min( abs( (x1-0.25)^2 - (x2-0.25)^2 ), abs( (x1-0.75)^2 - (x2-0.75)^2) ))
+xVec <- xN
+eps <- 0.3
+HyperC <- 2
+Nu <- 0.3
+
+GramMatrix_2 <- GramMat(xVec, ker_2) 
+DMatrix_2 <- DMat(GramMatrix_2)
+DVector_2 <- dVec(eps, tN)
+AMatrix_2 <- AMat(length(tN))
+bVector_2 <- bVec(HyperC, length(tN), Nu)
+
+Solution_2 <- solve.QP(nearPD(DMatrix_2)$mat, DVector_2, AMatrix_2, bVector_2, meq=1)
+Solution_2$solution
+
+importantPointIndex <- which(abs(Solution_2$solution) > 0.001)
+#importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20, importantPointIndex)
+importantPointIndex_aN <- importantPointIndex[which(importantPointIndex <= 20)]
+importantPointIndex_aN_hat <- importantPointIndex[which(importantPointIndex > 20)] - 20
+importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20, importantPointIndex)
+importantPointIndex <- unique(importantPointIndex)
+importantPointIndex
+
+model.2.data <- rbind(xVec[importantPointIndex], tN[importantPointIndex])
+model.2.data <- t(model.2.data)
+
+plot(x,sin(2*pi*x),type="l",col="green")
+points(xN,tN,col="blue",pch=16)
+points(model.2.data[, 1], model.2.data[, 2], pch=1,col='red')
 
 
-b.num <- findB()
-predictY <- calcY(x, Solution_1$solution[importantPointIndex_aN], Solution_1$solution[importantPointIndex_aN_hat], xVec)
+
+
