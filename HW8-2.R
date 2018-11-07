@@ -36,6 +36,11 @@ ker_2 <- function(x,y){
     return(min( abs( (x-0.25)^2 - (y-0.25)^2 ) , abs( (x-0.75)^2 - (y-0.75)^2 ) ))
 }
 
+# kenrel 3
+ker_3 <- function(x,y){
+    return(exp(-0.5 * 16 * 1.414 * (x-y) * (x-y)))
+}
+
 
 # Gram matrix calculate:
 #      since the x is one dim. don't need call apply anymore
@@ -46,7 +51,13 @@ Gram_diag_element <- function(x, distanceFun){
 }
 
 GramMat <- function(xVec,kernelFun){
-    Gram_diag <- diag( Gram_diag_element(xVec, kernelFun), length(xVec) ) # n * n diag
+    diag.vec <- Gram_diag_element(xVec, kernelFun)
+    if(length(diag.vec) != length(xVec) ){
+        Gram_diag <- diag( rep(diag.vec[1], length(xVec)) ) # n * n diag
+    }else{
+        Gram_diag <- diag( diag.vec ) # n * n diag
+    }
+    
     Gram_dist <- proxy::dist(xVec, method=kernelFun) # n-1 * n-1 mat
     
     return(as.matrix(Gram_dist) + Gram_diag)
@@ -61,7 +72,7 @@ DMat <- function(GramMat){
 
 # DVec changed
 dVec <- function(eps, tN){
-    return(c( rep(eps,length(tN)) - tN, rep(eps,length(tN)) + tN))
+    return(c(  tN - rep(eps,length(tN)), -rep(eps,length(tN)) - tN))
 }
 
 # AMat 
@@ -92,8 +103,8 @@ findB <- function(tN, aN, aN_Hat, Gmat, Nu ){
 }
 
 # Predict
-calcY <- function(xNew, aN, aN_hat, xVec, b.num, kenrelFun){
-    retrun( sum( (aN - aN_hat) * kernelFun(xVec, xNew) ) + b.num )
+calcY <- function(xNew, aN, aN_hat, xVec, b.num, kernelFun){
+    return( sum( (aN - aN_hat) * kernelFun(xVec, xNew) ) + b.num )
 }
 
 # data 
@@ -128,14 +139,14 @@ plot(x,sin(2*pi*x),type="l",col="green")
 points(xN,tN,col="blue",pch=16)
 points(model.1.data[, 1], model.1.data[, 2], pch=1,col='red')
 
-# using kernel 1 cannot fit a good model
 
-# kernel 2 =  min( abs( (x1-0.25)^2 - (x2-0.25)^2 ), abs( (x1-0.75)^2 - (x2-0.75)^2) ))
+# data 
 xVec <- xN
-eps <- 0.3
-HyperC <- 2
-Nu <- 0.3
+eps <- 0.1
+HyperC <- 100
+Nu <- 0.1
 
+# kernel 2
 GramMatrix_2 <- GramMat(xVec, ker_2) 
 DMatrix_2 <- DMat(GramMatrix_2)
 DVector_2 <- dVec(eps, tN)
@@ -153,6 +164,7 @@ importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20
 importantPointIndex <- unique(importantPointIndex)
 importantPointIndex
 
+
 model.2.data <- rbind(xVec[importantPointIndex], tN[importantPointIndex])
 model.2.data <- t(model.2.data)
 
@@ -161,5 +173,88 @@ points(xN,tN,col="blue",pch=16)
 points(model.2.data[, 1], model.2.data[, 2], pch=1,col='red')
 
 
+model2.xVec <- xVec[importantPointIndex]
+model2.tN <- tN[importantPointIndex]
+model2.aN <- Solution_2$solution[importantPointIndex]
+model2.aN.hat <- Solution_2$solution[importantPointIndex+20]
+model2.Gmat <- GramMatrix_2[importantPointIndex,importantPointIndex]
+
+b.2.num <- findB(model2.tN, model2.aN, model2.aN.hat, model2.Gmat, Nu)
+
+pred.Y <- lapply( x, calcY, aN = model2.aN, 
+                            aN_hat = model2.aN.hat, 
+                            xVec = model2.xVec, 
+                            b.num = b.2.num, 
+                            kernelFun = ker_2 )
+
+points(x, pred.Y, type='l',col='blue')
+y.Max <- as.numeric(pred.Y) + eps
+points(x, y.Max , type='l',col='blue')
+y.Min <- as.numeric(pred.Y) - eps
+points(x,y.Min, type='l',col='blue')
+
+
+
+
+# kernel 3
+xVec <- xN
+eps <- 0.3
+HyperC <- 100
+Nu <- 0.1
+
+
+GramMatrix_3 <- GramMat(xVec, ker_3) 
+DMatrix_3 <- DMat(GramMatrix_3)
+DVector_3 <- dVec(eps, tN)
+AMatrix_3 <- AMat(length(tN))
+bVector_3 <- bVec(HyperC, length(tN), Nu)
+
+Solution_3 <- solve.QP(nearPD(DMatrix_3)$mat, DVector_3, AMatrix_3, bVector_3, meq=1)
+Solution_3$solution
+
+importantPointIndex <- which(abs(Solution_3$solution) > 0.001)
+#importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20, importantPointIndex)
+importantPointIndex_aN <- importantPointIndex[which(importantPointIndex <= 20)]
+importantPointIndex_aN_hat <- importantPointIndex[which(importantPointIndex > 20)]
+importantPointIndex <- ifelse(importantPointIndex > 20, importantPointIndex - 20, importantPointIndex)
+importantPointIndex <- unique(importantPointIndex)
+importantPointIndex
+
+model.3.data <- rbind(xVec[importantPointIndex], tN[importantPointIndex])
+model.3.data <- t(model.3.data)
+
+plot(x,sin(2*pi*x),type="l",col="green", ylim=(c(-1.5, 1.5)))
+points(xN,tN,col="blue",pch=16)
+text(xN, tN, labels = seq(1,20,1))
+points(model.3.data[, 1], model.3.data[, 2], pch=1,col='red')
+
+model3.xVec <- xVec[importantPointIndex]
+model3.tN <- tN[importantPointIndex]
+model3.aN <- Solution_3$solution[importantPointIndex]
+model3.aN.hat <- Solution_3$solution[importantPointIndex+20]
+model3.Gmat <- GramMatrix_3[importantPointIndex,importantPointIndex]
+
+b.3.num <- findB(model3.tN, model3.aN, model3.aN.hat, model3.Gmat, Nu)
+
+pred.Y <- lapply( x, calcY, aN = model3.aN, 
+                            aN_hat = model3.aN.hat, 
+                            xVec = model3.xVec, 
+                            b.num = b.3.num, 
+                            kernelFun = ker_3 )
+
+points(x, pred.Y, type='l',col='blue')
+y.Max <- as.numeric(pred.Y) + eps
+points(x, y.Max , type='l',col='blue')
+y.Min <- as.numeric(pred.Y) - eps
+points(x,y.Min, type='l',col='blue')
+
+
+
+pred.Y2 <- NULL
+
+for(i in 1:length(x)){
+    tmp.y <- calcY(x[i], model3.aN, model3.aN.hat,  model3.xVec,b.3.num,ker_3 )
+    pred.Y2 <- c(pred.Y2, tmp.y)
+}
 
 
