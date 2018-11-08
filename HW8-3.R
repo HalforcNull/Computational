@@ -16,15 +16,6 @@ quartz()
 plot(x,sin(2*pi*x),type="l",col="green")
 points(xN,tN,col="blue")
 
-
-
-
-
-
-
-
-
-
 # kenrel 3
 ker_3 <- function(x,y){
     return(exp(-0.5 * 16 * 1.414 * (x-y) * (x-y)))
@@ -71,13 +62,38 @@ calcGammaVec <- function(sigma, currentAlpha){
 }
 
 # update alpha 
-updateAlpha <- function(mu, gamma){
+calcAlpha <- function(mu, gamma){
     return(gamma / mu^2)
 }
 
 # update beta
-updateBetaInv <- function(t, phi, mu, N, gamma ){
-    dis.sqr <- dist(rbind(t, phi %*% mu))^2
-    return(dis.sqr / (N - sum(gamma)))
+calcBeta <- function(tN, phi, mu, N, gamma ){
+    dis.sqr <- dist(rbind(tN, phi %*% mu))^2
+    return( (N - sum(gamma))/ dis.sqr )
 }
+
+
+# main function :
+xVec <- xN
+GramMatrix <- GramMat(xVec, ker_3) 
+my.N <- length(xN)
+alpha = rep(1, dim(GramMatrix)[1])
+beta = 1
+sigma <- calcSigma(alpha, beta, GramMatrix)
+mu <- calcMu(beta, sigma, GramMatrix, tN)
+
+for(i in 1:1000){
+    tmp.gamma <- calcGammaVec(sigma, alpha)
+    tmp.alpha <- calcAlpha(mu, tmp.gamma)
+    tmp.beta <- calcBeta(tN, GramMatrix, )
+}
+
+
+
+
+
+
+
+
+
 
