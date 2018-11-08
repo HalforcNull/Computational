@@ -33,7 +33,9 @@ ker_1 <- function(x,y){
 
 # kernel 2:
 ker_2 <- function(x,y){
-    return(min( abs( (x-0.25)^2 - (y-0.25)^2 ) , abs( (x-0.75)^2 - (y-0.75)^2 ) ))
+    d1 <- abs( (x-0.25)^2 - (y-0.25)^2 ) 
+    d2 <- abs( (x-0.75)^2 - (y-0.75)^2 )
+    return(ifelse(d1>d2, d2, d1))
 }
 
 # kenrel 3
@@ -142,9 +144,10 @@ points(model.1.data[, 1], model.1.data[, 2], pch=1,col='red')
 
 # data 
 xVec <- xN
-eps <- 0.1
-HyperC <- 100
+eps <- 0.3
+HyperC <- 5
 Nu <- 0.1
+
 
 # kernel 2
 GramMatrix_2 <- GramMat(xVec, ker_2) 
