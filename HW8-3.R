@@ -85,7 +85,17 @@ mu <- calcMu(beta, sigma, GramMatrix, tN)
 for(i in 1:1000){
     tmp.gamma <- calcGammaVec(sigma, alpha)
     tmp.alpha <- calcAlpha(mu, tmp.gamma)
-    tmp.beta <- calcBeta(tN, GramMatrix, )
+    tmp.beta <- calcBeta(tN, GramMatrix, mu, my.N, tmp.gamma)
+    tmp.sigma <- calcSigma(tmp.alpha, tmp.beta, GramMatrix)
+    tmp.mu <- calcMu(tmp.beta, tmp.sigma, GramMatrix, tN)
+
+    if( sum( abs(tmp.mu - mu) ) < 0.0001){
+        break
+    }
+    alpha <- tmp.alpha
+    beta <- tmp.beta
+    sigma <- tmp.sigma
+    mu <- tmp.mu
 }
 
 
