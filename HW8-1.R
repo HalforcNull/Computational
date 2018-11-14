@@ -103,7 +103,7 @@ Solution_1 <- solve.QP(nearPD(DMatrix_1)$mat, DVector_1, AMatrix_1, bVector_1, m
 
 
 ## Model and Model used points
-importantPointIndex <- which(abs(Solution_1$solution) > 0.001)
+importantPointIndex <- which((abs(Solution_1$solution) > 0.001))
 model.1.data <- xVec[importantPointIndex,]
 b_1 <- findB(tN[importantPointIndex], Solution_1$solution[importantPointIndex], GramMatrix_1[importantPointIndex,importantPointIndex])
 plot(X[X[,3]==-1,1],X[X[,3]==-1,2],pch=16,col="green",xlim=c(-2,2),ylim=c(-2,2))

@@ -112,7 +112,7 @@ calcY <- function(xNew, aN, aN_hat, xVec, b.num, kernelFun){
 # data 
 
 xVec <- xN
-eps <- 0.3
+eps <- 0.30
 HyperC <- 5
 Nu <- 0.3
 

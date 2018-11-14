@@ -73,7 +73,7 @@ calcBeta <- function(tN, Phi, mu, N, gamma ){
 xVec <- X[,1:2]
 tN <- X[,3]
 
-GramMatrix <- GramMat(xVec, ker_3) 
+GramMatrix <- GramMat(xVec, ker_1) 
 my.N <- length(xN)
 alpha = rep(0.00001, dim(GramMatrix)[1])
 beta = 0.00001
