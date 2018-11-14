@@ -1,7 +1,5 @@
-
 library(mvtnorm)
 library(Matrix)
-
 set.seed(76757)
 ###### define hyperparamters
 beta <- 1/0.2^2
@@ -45,12 +43,12 @@ GramMat <- function(xVec,kernelFun){
 
 # sigma function
 calcSigma <- function(alpha, beta, phi){
-    return(solve(diag(alpha) + beta * t(phi) %*% phi))
+    return(solve(nearPD(diag(alpha) + beta * t(phi) %*% phi)$mat))
 }
 
 # mu function
-calcMu <- function(beta, sigma, phi, tN){
-    return(beta * sigma %*% t(Phi) %*% tN)
+calcMu <- function(beta, sigma, Phi, tN){
+    return(beta * sigma %*% t(Phi) %*% as.matrix(tN, nrow = length(tN)))
 }
 
 
@@ -67,9 +65,13 @@ calcAlpha <- function(mu, gamma){
 }
 
 # update beta
-calcBeta <- function(tN, phi, mu, N, gamma ){
-    dis.sqr <- dist(rbind(tN, phi %*% mu))^2
+calcBeta <- function(tN, Phi, mu, N, gamma ){
+    dis.sqr <- dist(rbind(tN, t(Phi %*% mu)))^2
     return( (N - sum(gamma))/ dis.sqr )
+}
+
+calcY <- function(xNew, mu, xVec, kenrelFun){
+    return( sum(mu * kernelFun(xVec, xNew)))
 }
 
 
@@ -77,32 +79,39 @@ calcBeta <- function(tN, phi, mu, N, gamma ){
 xVec <- xN
 GramMatrix <- GramMat(xVec, ker_3) 
 my.N <- length(xN)
-alpha = rep(1, dim(GramMatrix)[1])
-beta = 1
+alpha = rep(0.1, dim(GramMatrix)[1])
+beta = 0.1
 sigma <- calcSigma(alpha, beta, GramMatrix)
 mu <- calcMu(beta, sigma, GramMatrix, tN)
 
-for(i in 1:1000){
+threshold.alpha <- 10000000
+
+
+for(i in 1:1000){    
     tmp.gamma <- calcGammaVec(sigma, alpha)
     tmp.alpha <- calcAlpha(mu, tmp.gamma)
+    #tmp.alpha <- ifelse(alpha > threshold.alpha , alpha, tmp.alpha)
+    
+ 
     tmp.beta <- calcBeta(tN, GramMatrix, mu, my.N, tmp.gamma)
+    tmp.beta <- as.numeric(tmp.beta)
     tmp.sigma <- calcSigma(tmp.alpha, tmp.beta, GramMatrix)
+    tmp.sigma <- matrix(tmp.sigma, nrow = nrow(tmp.sigma), ncol=ncol(tmp.sigma))
     tmp.mu <- calcMu(tmp.beta, tmp.sigma, GramMatrix, tN)
 
-    if( sum( abs(tmp.mu - mu) ) < 0.0001){
-        break
-    }
     alpha <- tmp.alpha
     beta <- tmp.beta
     sigma <- tmp.sigma
     mu <- tmp.mu
+    print(alpha)
 }
 
 
-
-
-
-
+pred.Y <- lapply( x, calcY, aN = model3.aN, 
+                            aN_hat = model3.aN.hat, 
+                            xVec = model3.xVec, 
+                            b.num = b.3.num, 
+                            kernelFun = ker_3 )
 
 
 
