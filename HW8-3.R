@@ -80,17 +80,21 @@ xVec <- xN
 GramMatrix <- GramMat(xVec, ker_3) 
 my.N <- length(xN)
 alpha = rep(0.1, dim(GramMatrix)[1])
-beta = 0.1
+beta = 1
 sigma <- calcSigma(alpha, beta, GramMatrix)
 mu <- calcMu(beta, sigma, GramMatrix, tN)
 
-threshold.alpha <- 10000000
+threshold.alpha <- 5e6
 
 
 for(i in 1:1000){    
     tmp.gamma <- calcGammaVec(sigma, alpha)
     tmp.alpha <- calcAlpha(mu, tmp.gamma)
-    #tmp.alpha <- ifelse(alpha > threshold.alpha , alpha, tmp.alpha)
+    if(all(tmp.alpha > threshold.alpha)){
+        break
+    }
+    print(sum(tmp.alpha>threshold.alpha))
+    tmp.alpha <- ifelse(tmp.alpha > threshold.alpha , threshold.alpha, tmp.alpha)
     
  
     tmp.beta <- calcBeta(tN, GramMatrix, mu, my.N, tmp.gamma)
@@ -103,12 +107,12 @@ for(i in 1:1000){
     beta <- tmp.beta
     sigma <- tmp.sigma
     mu <- tmp.mu
-    print(alpha)
+
+    alpha
 }
 
 
-pred.Y <- lapply( x, calcY, aN = model3.aN, 
-                            aN_hat = model3.aN.hat, 
+pred.Y <- lapply( x, calcY, mu = mu,
                             xVec = model3.xVec, 
                             b.num = b.3.num, 
                             kernelFun = ker_3 )
