@@ -88,7 +88,7 @@ DoPrediction <- function(model, xNew){
     return(results)
 }
 
-
+## Step 4. Function call
 
 
 
