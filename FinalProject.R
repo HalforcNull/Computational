@@ -20,7 +20,7 @@ dim(dat.training.X)
 length(dat.training.Tar)
 
 
-## Step 2. Functions
+## Step 2. Support Functions
 
 ### 2.1 Kernel
 ker <- function(x,y){
@@ -72,10 +72,21 @@ calcY <- function(xNew, mu, xVec, kenrelFun){
     return( sum(mu * kernelFun(xVec, xNew)))
 }
 
+## Step 3. Training Function and Predict Function
+TrainingModel <- function(xN, tN){
 
 
 
 
+    return(RVMModel)
+}
+
+
+DoPrediction <- function(model, xNew){
+
+
+    return(results)
+}
 
 
 
