@@ -74,8 +74,38 @@ calcY <- function(xNew, mu, xVec, kenrelFun){
 
 ## Step 3. Training Function and Predict Function
 TrainingModel <- function(xN, tN){
+    GramMatrix <- GramMat(xN, ker)
+    my.N <- length(xN)
+    alpha = rep(0.1, dim(GramMatrix)[1])
+    beta = 1
+    sigma <- calcSigma(alpha, beta, GramMatrix)
+    mu <- calcMu(beta, sigma, GramMatrix, tN) ## mu is not a value anymore
 
+    threshold.alpha <- 5e6
 
+    for(i in 1:1000){
+        tmp.gamma <- calcGammaVec(sigma, alpha)
+        tmp.alpha <- calcAlpha(mu, tmp.gamma)
+        if(all(tmp.alpha > threshold.alpha)){
+            break
+        }
+        print(sum(tmp.alpha>threshold.alpha))
+        tmp.alpha <- ifelse(tmp.alpha > threshold.alpha , threshold.alpha, tmp.alpha)
+        
+    
+        tmp.beta <- calcBeta(tN, GramMatrix, mu, my.N, tmp.gamma)
+        tmp.beta <- as.numeric(tmp.beta)
+        tmp.sigma <- calcSigma(tmp.alpha, tmp.beta, GramMatrix)
+        tmp.sigma <- matrix(tmp.sigma, nrow = nrow(tmp.sigma), ncol=ncol(tmp.sigma))
+        tmp.mu <- calcMu(tmp.beta, tmp.sigma, GramMatrix, tN)
+
+        alpha <- tmp.alpha
+        beta <- tmp.beta
+        sigma <- tmp.sigma
+        mu <- tmp.mu
+
+        alpha
+    }
 
 
     return(RVMModel)
