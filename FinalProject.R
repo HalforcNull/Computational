@@ -23,8 +23,14 @@ length(dat.training.Tar)
 ## Step 2. Support Functions
 
 ### 2.1 Kernel
-ker <- function(x,y){
-    return(exp(-0.5 * 16 * 1.414 * (x-y) * (x-y)))
+### ker_1 is the one I used in previous HW
+ker_1 <- function(x,y){
+    return(exp(-0.5 * 16 * 1.414 * t(x-y) %*% (x-y)))
+}
+
+### ker_2 is the one I used in final project of Multi var
+ker_2 <- function(x,y){
+  return(cor(x,y))
 }
 
 ### 2.2 Gram Matrix
@@ -74,14 +80,15 @@ calcY <- function(xNew, mu, xVec, kenrelFun){
 
 ## Step 3. Training Function and Predict Function
 TrainingModel <- function(xN, tN){
-    GramMatrix <- GramMat(xN, ker)
-    my.N <- length(xN)
-    alpha = rep(0.1, dim(GramMatrix)[1])
+    GramMatrix <- GramMat(xN, ker_1)
+    my.N <- dim(xN)[1]+1
+    phi <- cbind(rep(1, my.N-1), GramMatrix)
+    alpha = rep(0.1, my.N)
     beta = 1
-    sigma <- calcSigma(alpha, beta, GramMatrix)
-    mu <- calcMu(beta, sigma, GramMatrix, tN) ## mu is not a value anymore
+    sigma <- calcSigma(alpha, beta, phi)
+    mu <- calcMu(beta, sigma, phi, tN) ## mu is not a value anymore
 
-    threshold.alpha <- 5e6
+    threshold.alpha <- 1e7
 
     for(i in 1:1000){
         tmp.gamma <- calcGammaVec(sigma, alpha)
@@ -89,22 +96,21 @@ TrainingModel <- function(xN, tN){
         if(all(tmp.alpha > threshold.alpha)){
             break
         }
-        print(sum(tmp.alpha>threshold.alpha))
-        tmp.alpha <- ifelse(tmp.alpha > threshold.alpha , threshold.alpha, tmp.alpha)
+        tmp.alpha <- ifelse(alpha < threshold.alpha , tmp.alpha, alpha)
         
     
-        tmp.beta <- calcBeta(tN, GramMatrix, mu, my.N, tmp.gamma)
+        tmp.beta <- calcBeta(tN, phi, mu, my.N, tmp.gamma)
         tmp.beta <- as.numeric(tmp.beta)
-        tmp.sigma <- calcSigma(tmp.alpha, tmp.beta, GramMatrix)
+        tmp.sigma <- calcSigma(tmp.alpha, tmp.beta, phi)
         tmp.sigma <- matrix(tmp.sigma, nrow = nrow(tmp.sigma), ncol=ncol(tmp.sigma))
-        tmp.mu <- calcMu(tmp.beta, tmp.sigma, GramMatrix, tN)
+        tmp.mu <- calcMu(tmp.beta, tmp.sigma, phi, tN)
 
         alpha <- tmp.alpha
         beta <- tmp.beta
         sigma <- tmp.sigma
         mu <- tmp.mu
 
-        alpha
+        print(max(alpha))
     }
 
 
@@ -120,5 +126,5 @@ DoPrediction <- function(model, xNew){
 
 ## Step 4. Function call
 
-
-
+xN <- t(dat.training.X)
+tN <- dat.training.Tar
