@@ -111,25 +111,26 @@ calcY <- function(xNew, xModel, wModel, HassianModel, kernelFun){
 ## Step 3. Training Function and Predict Function
 TrainingModel <- function(xN, tN){
     # calc gram matrix and size of sample
-    GramMatrix <- GramMat(xN, ker_4) / 100
+    GramMatrix <- GramMat(xN, ker_2)
     my.N <- dim(xN)[1]
 
     # init 
-    my.alpha <- rep(1, my.N)
+    my.alpha <- rep(0.1, my.N)
     threshold.alpha <- 1e7
     converge.threshold <- 1e-6
     
-    last.alpha <- rep(0, my.N)  ## used for checking converge
-    my.weight <- rep(0, my.N)
+    last.alpha <- my.alpha  ## used for checking converge
+    my.weight <- rep(0.1, my.N)
 
     for(i in 1:5000){
         # calc/init optim need parms
         tmp.A.Mat <- calAMat(my.alpha)
         
-        optimResult <- optim(par=my.weight, fn=opmtTarget, hessian=TRUE, gr=gradientFunc, A.Mat = tmp.A.Mat, t.vec = tN, PhiMat = GramMatrix)
+        optimResult <- optim(par=my.weight, fn=opmtTarget, hessian=TRUE, gr=gradientFunc,  method = "L-BFGS-B", A.Mat = tmp.A.Mat, t.vec = tN, PhiMat = GramMatrix)
 
         weight.new <- optimResult$par
         sigma.new <- solve( -optimResult$hessian )
+        sigma.new
         gamma.new <- calcGammaVec(sigma.new, my.alpha)
         alpha.new <- calcAlpha(weight.new, gamma.new)
 
@@ -140,9 +141,8 @@ TrainingModel <- function(xN, tN){
         }
         
         my.alpha <- ifelse(abs(alpha.new) > threshold.alpha, my.alpha, alpha.new)
-        #my.alpha <- alpha.new
-        #my.alpha
-        #my.weight <- weight.new # don't need update weight
+        my.alpha
+        weight.new 
     }
 
     selectedNodes <- which(weight.new > 0.001 )
