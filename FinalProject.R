@@ -13,24 +13,32 @@ dat.training.S1 <- apply(ink.training.dat[,,,1], 3, as.numeric)
 dat.training.S2 <- apply(ink.training.dat[,,,2], 3, as.numeric)
 
 dat.training.X <- cbind(dat.training.S1, dat.training.S2)
-dat.training.Tar <- c(rep(1, 22), rep(2,22))
+dat.training.Tar <- c(rep(0, 22), rep(1,22)) #  To start with, we consider two-class problems
+                                             #  with a binary target variable t ∈ {0, 1}.
 
 
 dim(dat.training.X)
 length(dat.training.Tar)
-
 
 ## Step 2. Support Functions
 
 ### 2.1 Kernel
 ### ker_1 is the one I used in previous HW
 ker_1 <- function(x,y){
-    return(exp(-0.5 * 16 * 1.414 * t(x-y) %*% (x-y)))
+    return(exp(-0.5 * t(x-y) %*% (x-y)))
 }
 
 ### ker_2 is the one I used in final project of Multi var
 ker_2 <- function(x,y){
   return(cor(x,y))
+}
+
+ker_3 <- function(x,y){
+    return(1/(cor(x,y))
+}
+
+ker_4 <- function(x,y){
+    return(exp(10-cor(x,y)) - exp(9))
 }
 
 ### 2.2 Gram Matrix
@@ -45,86 +53,138 @@ GramMat <- function(xVec,kernelFun){
     return(as.matrix(Gram_dist) + Gram_diag)
 }
 
-### 2.3 sigma function
-calcSigma <- function(alpha, beta, phi){
-    return(solve(nearPD(diag(alpha) + beta * t(phi) %*% phi)$mat))
+### 2.3 Sigmoid Function
+Sigmoid.fun <- function(w, Phi_X){
+  a = t(w) %*% Phi_X
+  return(as.vector(1/(1+exp(-a))))
 }
 
-### 2.4 mu function
-calcMu <- function(beta, sigma, Phi, tN){
-    return(beta * sigma %*% t(Phi) %*% as.matrix(tN, nrow = length(tN)))
+### 2.4 optimization target (used to be 4.142, now is 7.109)
+#### 2.4.1 main ln p function
+ln.w.t <- function(w.vec, A.Mat, t.vec, PhiMat){
+    y.vec <- Sigmoid.fun(w.vec, PhiMat)
+    part.1 = sum( t.vec * log2(y.vec) )
+    part.2 = sum( (1-t.vec) * log2(1-y.vec))
+    part.3 = -0.5 * t(w.vec) %*% A.Mat %*% w.vec
+
+    return(part.1+part.2+part.3)
 }
 
-### 2.5 gamma: used to udpate alpha and beta
+opmtTarget <- function(w.vec, A.Mat, t.vec, PhiMat){
+  return(-ln.w.t(w.vec, A.Mat, t.vec, PhiMat))
+}
+
+
+#### 2.4.2 A.mat function
+calAMat <- function(alpha){
+    return(diag(alpha))
+}
+
+
+### 2.5 Gradient function
+gradientFunc <- function(w.vec, t.vec, A.Mat, PhiMat){
+    y.vec <- Sigmoid.fun(w.vec, PhiMat)
+    return(t(PhiMat) %*% (t.vec-y.vec) - A.Mat%*%w.vec)
+}
+
+### 2.7 gamma: used to udpate alpha and beta
 calcGammaVec <- function(sigma, currentAlpha){
     diagSigma <- rowSums( sigma * diag(dim(sigma)[1]) )
     gamma <- 1 - currentAlpha * diagSigma
     return(gamma)
 }
 
-### 2.6 update alpha 
-calcAlpha <- function(mu, gamma){
-    return(gamma / mu^2)
+### 2.8 update alpha 
+calcAlpha <- function(w.new, gamma){
+    return(gamma / w.new^2)
 }
 
-### 2.7 update beta
-calcBeta <- function(tN, Phi, mu, N, gamma ){
-    dis.sqr <- dist(rbind(tN, t(Phi %*% mu)))^2
-    return( (N - sum(gamma))/ dis.sqr )
-}
-
-### 2.8 predict function
-calcY <- function(xNew, mu, xVec, kenrelFun){
-    return( sum(mu * kernelFun(xVec, xNew)))
+### 2.9 predict function
+calcY <- function(xNew, xModel, wModel, HassianModel, kernelFun){
+    K.new <- apply(xModel, 1, kernelFun, y = xNew)
+    mu.a <- t(wModel) %*% K.new
+    var.a <- t(K.new) %*% -HassianModel %*% K.new
+    kappa <- 1/sqrt(1 + pi*var.a/8)
+    return(1/(1+exp(-kappa %*% t(mu.a))))
 }
 
 ## Step 3. Training Function and Predict Function
 TrainingModel <- function(xN, tN){
-    GramMatrix <- GramMat(xN, ker_1)
-    my.N <- dim(xN)[1]+1
-    phi <- cbind(rep(1, my.N-1), GramMatrix)
-    alpha = rep(0.1, my.N)
-    beta = 1
-    sigma <- calcSigma(alpha, beta, phi)
-    mu <- calcMu(beta, sigma, phi, tN) ## mu is not a value anymore
+    # calc gram matrix and size of sample
+    GramMatrix <- GramMat(xN, ker_4) / 100
+    my.N <- dim(xN)[1]
 
+    # init 
+    my.alpha <- rep(1, my.N)
     threshold.alpha <- 1e7
-
-    for(i in 1:1000){
-        tmp.gamma <- calcGammaVec(sigma, alpha)
-        tmp.alpha <- calcAlpha(mu, tmp.gamma)
-        if(all(tmp.alpha > threshold.alpha)){
-            break
-        }
-        tmp.alpha <- ifelse(alpha < threshold.alpha , tmp.alpha, alpha)
-        
+    converge.threshold <- 1e-6
     
-        tmp.beta <- calcBeta(tN, phi, mu, my.N, tmp.gamma)
-        tmp.beta <- as.numeric(tmp.beta)
-        tmp.sigma <- calcSigma(tmp.alpha, tmp.beta, phi)
-        tmp.sigma <- matrix(tmp.sigma, nrow = nrow(tmp.sigma), ncol=ncol(tmp.sigma))
-        tmp.mu <- calcMu(tmp.beta, tmp.sigma, phi, tN)
+    last.alpha <- rep(0, my.N)  ## used for checking converge
+    my.weight <- rep(0, my.N)
 
-        alpha <- tmp.alpha
-        beta <- tmp.beta
-        sigma <- tmp.sigma
-        mu <- tmp.mu
+    for(i in 1:5000){
+        # calc/init optim need parms
+        tmp.A.Mat <- calAMat(my.alpha)
+        
+        optimResult <- optim(par=my.weight, fn=opmtTarget, hessian=TRUE, gr=gradientFunc, A.Mat = tmp.A.Mat, t.vec = tN, PhiMat = GramMatrix)
 
-        print(max(alpha))
+        weight.new <- optimResult$par
+        sigma.new <- solve( -optimResult$hessian )
+        gamma.new <- calcGammaVec(sigma.new, my.alpha)
+        alpha.new <- calcAlpha(weight.new, gamma.new)
+
+        if(sum(abs(alpha.new-last.alpha)/last.alpha) < converge.threshold){
+            break
+        }else{
+            last.alpha <- alpha.new
+        }
+        
+        my.alpha <- ifelse(abs(alpha.new) > threshold.alpha, my.alpha, alpha.new)
+        #my.alpha <- alpha.new
+        #my.alpha
+        #my.weight <- weight.new # don't need update weight
     }
 
+    selectedNodes <- which(weight.new > 0.001 )
 
+    RVMModel=list()
+    RVMModel$selectX <- xN[selectedNodes,]
+    RVMModel$selectW <- my.weight[selectedNodes]
+    RVMModel$Hessian <- optimResult$hessian[selectedNodes,selectedNodes]
+    RVMModel$selectT <- tN[selectedNodes]
     return(RVMModel)
 }
 
 
 DoPrediction <- function(model, xNew){
 
+    Y.vec <- calcY(xNew, model$selectX, model$selectW, model$Hessian, ker_4)
 
-    return(results)
+    return(ifelse( Y.vec  < 0.5, 1,2))
 }
 
 ## Step 4. Function call
 
+
 xN <- t(dat.training.X)
 tN <- dat.training.Tar
+## 
+
+my.model <- TrainingModel(xN, tN)
+dim(my.model$selectX)
+
+i = 1
+result <- NULL
+for( i in 1:44){
+    result <- c( result, as.numeric(DoPrediction(my.model, xN[i,])))
+}
+
+result
+##xNew <- xN[1,]
+##xModel <- my.model$selectX
+##wModel <- my.model$selectW
+##HassianModel <- my.model$Hessian
+##kernelFun <- ker_4
+
+
+
