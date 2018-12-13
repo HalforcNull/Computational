@@ -34,7 +34,7 @@ ker_2 <- function(x,y){
 }
 
 ker_3 <- function(x,y){
-    return(1/(cor(x,y))
+    return(1/(cor(x,y)))
 }
 
 ker_4 <- function(x,y){
@@ -122,11 +122,11 @@ TrainingModel <- function(xN, tN){
     last.alpha <- my.alpha  ## used for checking converge
     my.weight <- rep(0.1, my.N)
 
-    for(i in 1:5000){
+    for(i in 1:1000){
         # calc/init optim need parms
         tmp.A.Mat <- calAMat(my.alpha)
         
-        optimResult <- optim(par=my.weight, fn=opmtTarget, hessian=TRUE, gr=gradientFunc,  method = "L-BFGS-B", A.Mat = tmp.A.Mat, t.vec = tN, PhiMat = GramMatrix)
+        optimResult <- optim(par=my.weight, fn=opmtTarget, hessian=TRUE, gr=gradientFunc, A.Mat = tmp.A.Mat, t.vec = tN, PhiMat = GramMatrix, control = list(maxit=1000))
 
         weight.new <- optimResult$par
         sigma.new <- solve( -optimResult$hessian )
@@ -145,11 +145,11 @@ TrainingModel <- function(xN, tN){
         weight.new 
     }
 
-    selectedNodes <- which(weight.new > 0.001 )
+    selectedNodes <- which(weight.new > 0.18 )
 
     RVMModel=list()
     RVMModel$selectX <- xN[selectedNodes,]
-    RVMModel$selectW <- my.weight[selectedNodes]
+    RVMModel$selectW <- weight.new[selectedNodes]
     RVMModel$Hessian <- optimResult$hessian[selectedNodes,selectedNodes]
     RVMModel$selectT <- tN[selectedNodes]
     return(RVMModel)
@@ -158,8 +158,8 @@ TrainingModel <- function(xN, tN){
 
 DoPrediction <- function(model, xNew){
 
-    Y.vec <- calcY(xNew, model$selectX, model$selectW, model$Hessian, ker_4)
-
+    Y.vec <- calcY(xNew, model$selectX, model$selectW, model$Hessian, ker_2)
+    return(Y.vec)
     return(ifelse( Y.vec  < 0.5, 1,2))
 }
 
@@ -180,11 +180,6 @@ for( i in 1:44){
 }
 
 result
-##xNew <- xN[1,]
-##xModel <- my.model$selectX
-##wModel <- my.model$selectW
-##HassianModel <- my.model$Hessian
-##kernelFun <- ker_4
 
 
 
